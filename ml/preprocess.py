@@ -5,13 +5,13 @@ import numpy as np
 import pandas as pd
 
 
-def sliding_window(df, window_minutes=60, freq='1T'):
+def sliding_window(df, window_minutes=60, freq='1min'):
     # df expected to have timestamp index or a 'timestamp' column in seconds
     if 'timestamp' in df.columns:
         df = df.set_index(pd.to_datetime(df['timestamp'], unit='s'))
     df = df.resample(freq).mean().interpolate()
     # rolling window in minutes
-    window = f"{window_minutes}T"
+    window = f"{window_minutes}min"
     rolled = df.rolling(window=window).mean()
     return rolled
 

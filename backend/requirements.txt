@@ -6,3 +6,6 @@ python-dotenv
 pandas
 requests
 discord.py==2.3.2
+numpy
+scikit-learn
+torch

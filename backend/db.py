@@ -1,9 +1,12 @@
 import sqlite3
 from contextlib import closing
+from pathlib import Path
 
-DB_PATH = "backend/data/vitals.db"
+DB_PATH = str(Path(__file__).parent / "data" / "vitals.db")
+
 
 def init_db():
+    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     with closing(conn):
         cur = conn.cursor()
@@ -24,6 +27,16 @@ def init_db():
         ''')
         conn.commit()
 
+
+def _get(record, *keys):
+    """Return the first present value from record using the given keys, preserving 0.0."""
+    for k in keys:
+        v = record.get(k)
+        if v is not None:
+            return v
+    return None
+
+
 def insert_vital(record):
     conn = sqlite3.connect(DB_PATH)
     with closing(conn):
@@ -33,17 +46,18 @@ def insert_vital(record):
             (
                 record.get("patient_id"),
                 record.get("timestamp"),
-                record.get("hr") or record.get("HR"),
-                record.get("spo2") or record.get("SpO2"),
-                record.get("rr") or record.get("RespRate"),
-                record.get("systolic") or record.get("NISysABP"),
-                record.get("diastolic") or record.get("NIDiasABP"),
-                record.get("temp") or record.get("Temp"),
-                record.get("etco2") or record.get("EtCO2"),
+                _get(record, "hr", "HR"),
+                _get(record, "spo2", "SpO2"),
+                _get(record, "rr", "RespRate"),
+                _get(record, "systolic", "NISysABP"),
+                _get(record, "diastolic", "NIDiasABP"),
+                _get(record, "temp", "Temp"),
+                _get(record, "etco2", "EtCO2"),
                 record.get("risk_score", 0),
             ),
         )
         conn.commit()
+
 
 def get_latest_vitals(patient_id, limit=10):
     """Get the latest vital readings for a patient."""
@@ -56,6 +70,7 @@ def get_latest_vitals(patient_id, limit=10):
         )
         rows = cur.fetchall()
     return rows
+
 
 def get_top_patients(limit=6):
     """Get top N patients by latest risk score."""

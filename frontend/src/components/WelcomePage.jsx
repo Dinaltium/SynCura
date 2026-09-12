@@ -17,11 +17,58 @@ export default function WelcomePage() {
     const storedTheme = localStorage.getItem('syncura-theme')
     return storedTheme === 'dark' ? 'dark' : 'light'
   })
+  const [bpm, setBpm] = useState(72)
+  const [riskTarget, setRiskTarget] = useState(84)
+  const [riskPercent, setRiskPercent] = useState(0)
   const nextTheme = theme === 'light' ? 'dark' : 'light'
 
   useEffect(() => {
     localStorage.setItem('syncura-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setBpm((currentBpm) => {
+        const direction = Math.random() > 0.5 ? 1 : -1
+        const nextBpm = currentBpm + direction * (Math.random() > 0.4 ? 1 : 2)
+        return Math.max(66, Math.min(88, nextBpm))
+      })
+    }, 3200)
+
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setRiskTarget((currentRisk) => {
+        const direction = Math.random() > 0.45 ? 1 : -1
+        const nextRisk = currentRisk + direction * (Math.random() > 0.5 ? 1 : 2)
+        return Math.max(76, Math.min(94, nextRisk))
+      })
+    }, 4200)
+
+    return () => window.clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    let frameId = 0
+    const duration = 1800
+    let startTime = 0
+
+    setRiskPercent(0)
+
+    const animateRisk = (timestamp) => {
+      if (!startTime) startTime = timestamp
+      const progress = Math.min((timestamp - startTime) / duration, 1)
+      setRiskPercent(Math.round(riskTarget * progress))
+      if (progress < 1) {
+        frameId = window.requestAnimationFrame(animateRisk)
+      }
+    }
+
+    frameId = window.requestAnimationFrame(animateRisk)
+    return () => window.cancelAnimationFrame(frameId)
+  }, [riskTarget])
 
   return (
     <div className={`welcome-container theme-${theme}`}>
@@ -94,16 +141,16 @@ export default function WelcomePage() {
                       />
                     </svg>
                   </div>
-                  <div className="metric-value">72 BPM</div>
+                  <div key={bpm} className="metric-value bpm-live">{bpm} BPM</div>
                 </div>
               </div>
 
               <div className="preview-risk">
                 <div className="risk-header">RISK ASSESSMENT</div>
                 <div className="risk-item">
-                  <div className="risk-label">84% Sepsis</div>
+                  <div key={riskTarget} className="risk-label risk-percent-live">{riskPercent}% Sepsis</div>
                   <div className="risk-bar">
-                    <div className="risk-fill" style={{ width: '84%' }}></div>
+                    <div key={riskTarget} className="risk-fill risk-fill-live" style={{ width: `${riskPercent}%` }}></div>
                   </div>
                   <div className="risk-time">Predicted in next 4 hours</div>
                 </div>

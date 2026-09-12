@@ -13,7 +13,11 @@ from ml.train_lstm import LSTMModel
 
 def load_model(path, input_size):
     model = LSTMModel(input_size)
-    model.load_state_dict(torch.load(path, map_location='cpu'))
+    try:
+        state = torch.load(path, map_location='cpu', weights_only=True)
+    except TypeError:
+        state = torch.load(path, map_location='cpu')
+    model.load_state_dict(state)
     model.eval()
     return model
 
@@ -25,7 +29,9 @@ def explain_sample(model, X_sample):
             t = torch.tensor(x.reshape(-1, X_sample.shape[1], X_sample.shape[2]), dtype=torch.float32)
             return model(t).numpy()
 
-    explainer = shap.KernelExplainer(f, np.zeros((1, X_sample.shape[1], X_sample.shape[2])))
+    # Use the sample data itself as background (better than zeros)
+    background = X_sample[:min(10, len(X_sample))]
+    explainer = shap.KernelExplainer(f, background.reshape(background.shape[0], -1))
     vals = explainer.shap_values(X_sample.reshape(X_sample.shape[0], -1))
     return vals
 

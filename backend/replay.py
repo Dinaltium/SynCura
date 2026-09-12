@@ -85,7 +85,10 @@ def replay_http(url, patient_files, speed=1):
 
 def replay_mqtt(broker, topic, patient_files, speed=1):
     """Stream patient vitals to MQTT broker."""
-    client = mqtt.Client()
+    try:
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    except (TypeError, AttributeError):
+        client = mqtt.Client()
     client.connect(broker, 1883, 60)
     client.loop_start()
     
