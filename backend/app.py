@@ -183,6 +183,9 @@ class TrainingConfig(BaseModel):
     learning_rate: float = 0.001
     max_patients: int = 100
     vital_features: list = ["HR", "RespRate", "Temp", "NISysABP", "NIDiasABP", "SpO2"]
+    stride: int = 15
+    label_mode: str = "proximity"
+    horizon_hours: float = 12.0
 
 
 @app.get("/health")

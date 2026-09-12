@@ -33,10 +33,16 @@ pip install -r ml\requirements.txt
 python -m ml.train `
   --physionet "C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0\set-a" `
   --outcomes "C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0\Outcomes-a.txt" `
-  --max-patients 100 `
-  --epochs 20 `
-  --patience 5
+  --epochs 25 `
+  --patience 7 `
+  --stride 15 `
+  --batch-size 128 `
+  --lr 0.0003
 ```
+
+This uses the full set-a (~1,500 patients), 60-minute windows with 15-minute stride, proximity labeling (last 12h of each stay), population normalization, and early stopping. Metrics go to the latest `ml/training_runs/run_*/metrics.json` (copied to `ml/metrics.json`), model to `ml/models/lstm_baseline.pt`, scaler stats to `ml/scaler.json`.
+
+For a quick smoke test only (not reportable): add `--max-patients 100 --epochs 2`.
 
 This loads ~100 patients, creates 60-minute sliding windows of vitals (HR, RespRate, Temp, SysBP, DiasBP, SpO2), normalizes, trains an AttentionLSTM with early stopping, and saves metrics to `ml/metrics.json`.
 

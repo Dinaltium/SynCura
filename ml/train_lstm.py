@@ -43,6 +43,8 @@ class AttentionLSTMModel(nn.Module):
     - Batch normalization for regularization
     - Dropout before final classification
 
+    forward() returns raw logits (no sigmoid): train with BCEWithLogitsLoss
+    and apply sigmoid only at inference/evaluation time.
     The attention weights provide per-timestep interpretability, showing which
     moments in the patient's trajectory most influenced the risk prediction.
     """
@@ -61,7 +63,6 @@ class AttentionLSTMModel(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.batch_norm = nn.BatchNorm1d(hidden_size)
         self.fc = nn.Linear(hidden_size, 1)
-        self.sig = nn.Sigmoid()
 
     def forward(self, x):
         lstm_out, _ = self.lstm(x)  # (batch, seq, hidden)
@@ -73,11 +74,11 @@ class AttentionLSTMModel(nn.Module):
         # Weighted context vector
         context = torch.sum(attn_weights * lstm_out, dim=1)  # (batch, hidden)
 
-        # Regularization + classification
+        # Regularization + classification (logits; sigmoid applied by caller)
         context = self.dropout(context)
         context = self.batch_norm(context)
         out = self.fc(context)
-        return self.sig(out).squeeze(-1)
+        return out.squeeze(-1)
 
     def get_attention_weights(self, x):
         """Return per-timestep attention weights for interpretability."""
@@ -107,7 +108,7 @@ def train(
     - Uses CUDA automatically if available, unless `device` is provided.
     - Keeps DataLoader CPU-based and moves batches to device each step.
     - `progress_callback(epoch, metrics_dict)` is optional.
-    - `pos_weight`: float ratio (neg/pos) to upweight positive class via per-sample loss weighting.
+    - `pos_weight`: float ratio (neg/pos) for BCEWithLogitsLoss class weighting.
     - `model_class`: which model to create when `model` is not given (default: AttentionLSTMModel).
     - `model` / `optimizer`: pass an existing model (and its optimizer) to
       continue training it instead of starting from scratch. Required for
@@ -137,7 +138,11 @@ def train(
     if optimizer is None:
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     opt = optimizer
-    loss_fn = nn.BCELoss(reduction='none')
+    if pos_weight is not None:
+        pw = torch.tensor(float(pos_weight), dtype=torch.float32, device=device)
+    else:
+        pw = None
+    loss_fn = nn.BCEWithLogitsLoss(pos_weight=pw)
 
     for e in range(epochs):
         model.train()
@@ -145,13 +150,8 @@ def train(
         for xb, yb in dl:
             xb = xb.to(device, non_blocking=True)
             yb = yb.to(device, non_blocking=True)
-            pred = model(xb)
-            element_loss = loss_fn(pred, yb)
-            if pos_weight is not None:
-                weights = torch.where(yb == 1, pos_weight, 1.0)
-                loss = (element_loss * weights).mean()
-            else:
-                loss = element_loss.mean()
+            logits = model(xb)
+            loss = loss_fn(logits, yb)
             opt.zero_grad()
             loss.backward()
             opt.step()

@@ -31,6 +31,7 @@ def compute_shap_explanation(model, patient_sequence, feature_names=None, n_back
     window_size, n_features = patient_sequence.shape
 
     # Wrapper: takes flat 2D input, returns prediction probability
+    # (model outputs logits; sigmoid applied here)
     def predict_fn(x_flat):
         batch = x_flat.shape[0]
         x = torch.tensor(
@@ -38,7 +39,7 @@ def compute_shap_explanation(model, patient_sequence, feature_names=None, n_back
             dtype=torch.float32
         )
         with torch.no_grad():
-            return model(x).numpy()
+            return torch.sigmoid(model(x)).numpy()
 
     # Background: mean-centered noise around the patient's data
     bg_mean = patient_sequence.mean(axis=0, keepdims=True)

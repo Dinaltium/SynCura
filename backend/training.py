@@ -105,7 +105,9 @@ class TrainingManager:
                 vital_features=config.get('vital_features', ['HR', 'RespRate', 'Temp', 'NISysABP', 'NIDiasABP', 'SpO2']),
                 window_minutes=config.get('window', 60),
                 max_patients=config.get('max_patients', 100),
-                stride=config.get('stride', 1),
+                stride=config.get('stride', 15),
+                label_mode=config.get('label_mode', 'proximity'),
+                horizon_hours=config.get('horizon_hours', 12),
             )
             
             job.progress_queue.put({
@@ -124,6 +126,15 @@ class TrainingManager:
                 "type": "status",
                 "message": f"Split data: train={X_train.shape[0]} val={X_val.shape[0]}"
             })
+
+            # Population normalization from TRAIN ONLY (preserves absolute severity)
+            flat = X_train.reshape(-1, X_train.shape[-1]).astype(np.float64)
+            train_mean = np.nanmean(flat, axis=0)
+            train_std = np.nanstd(flat, axis=0) + 1e-6
+            X_train = (np.where(np.isnan(X_train), train_mean, X_train) - train_mean) / train_std
+            X_val = (np.where(np.isnan(X_val), train_mean, X_val) - train_mean) / train_std
+            X_train = X_train.astype(np.float32)
+            X_val = X_val.astype(np.float32)
             
             # Compute pos_weight for class imbalance
             n_neg = int((y_train == 0).sum())
@@ -140,6 +151,8 @@ class TrainingManager:
                 learning_rate=config.get('learning_rate', 0.001),
                 progress_callback=self._training_progress_callback(job),
                 pos_weight=pos_weight,
+                dropout=config.get('dropout', None),
+                weight_decay=config.get('weight_decay', 0.0),
             )
             
             # Evaluate on validation set
@@ -151,6 +164,11 @@ class TrainingManager:
             model_path = config.get('model_output', 'ml/models/lstm_baseline.pt')
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
             torch.save(model.state_dict(), model_path)
+
+            # Save scaler stats for inference
+            with open('ml/scaler.json', 'w') as f:
+                json.dump({'mean': [float(v) for v in train_mean],
+                           'std': [float(v) for v in train_std]}, f, indent=2)
             
             job.status = "completed"
             job.end_time = datetime.now().isoformat()
@@ -198,7 +216,8 @@ class TrainingManager:
         with torch.no_grad():
             for start in range(0, len(X), batch_size):
                 xb = torch.tensor(X[start:start + batch_size], dtype=torch.float32).to(device)
-                probs_batches.append(model(xb).detach().cpu().numpy())
+                logits = model(xb)
+                probs_batches.append(torch.sigmoid(logits).detach().cpu().numpy())
         probs = np.concatenate(probs_batches)
 
         auc = roc_auc_score(y, probs) if len(np.unique(y)) > 1 else float('nan')

@@ -6,14 +6,11 @@
 
 ### Base Paper
 
-**GARLIC: Graph Attention-based Relational Learning of Multivariate Time Series in Intensive Care**
-*arXiv:2608.10969, ICLR 2026*
+**Wang, Y., Bai, Y., & Jin, G. (2026).** Explainable Deep-Learning Models to Predict Diaphragmatic Dysfunction and Cognitive Stress in ICU Patients Under Mechanical Ventilation. *Frontiers in Physiology*, 17, 1765898. https://doi.org/10.3389/fphys.2026.1765898
 
-- Paper: https://openreview.net/forum?id=4ZAwmIaA9y
-- Code: https://github.com/scai-lab/GARLIC
-- Authors: Ruirui Wang, Yanke Li, Manuel Günther, Diego Paez-Granados
+LSTM on continuous clinical time-series from 25,751 ventilated ICU patients (AUC 0.79–0.87 across outcomes). Closest architectural match to SynCura's explainable LSTM on longitudinal vitals; realistic adaptation target. See `LITERATURE_REVIEW.md` for the full review (base + 8 supporting papers).
 
-SynCura extends GARLIC's attention-based approach with LSTM (lighter than graph attention), SpO2 features, early stopping, SHAP explainability, and a deployable full-stack system (FastAPI + React).
+**Adaptation:** mirror their LSTM-centric, explainability-first design on PhysioNet 2012 six-vital data, plus temporal attention (absent in their RNN/GRU/LSTM comparison).
 
 ---
 

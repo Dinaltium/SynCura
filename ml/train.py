@@ -1,10 +1,10 @@
 """High-level training script for PhysioNet 2012 dataset.
 
-Run:
-  python ml/train.py \
-    --physionet "C:/Users/fizan/Downloads/Techfusion/predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0/predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0/set-a" \
-    --outcomes "C:/Users/fizan/Downloads/Techfusion/predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0/predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0/Outcomes-a.txt" \
-    --epochs 20 --max-patients 100 --patience 5
+Standard (reportable) run - full set-a, proximity labels, population norm:
+  python -m ml.train --physionet <set-a> --outcomes <Outcomes-a.txt> \
+    --epochs 25 --patience 7 --stride 15 --batch-size 128 --lr 0.0003
+
+Smoke test only (not reportable): add --max-patients 100 --epochs 2
 """
 import argparse
 import datetime
@@ -52,7 +52,8 @@ def evaluate_model(model, X, y, batch_size=4096, device=None):
     with torch.no_grad():
         for start in tqdm(range(0, len(X), batch_size), desc='Evaluating', leave=False):
             xb = torch.tensor(X[start:start + batch_size], dtype=torch.float32).to(device)
-            probs_batches.append(model(xb).detach().cpu().numpy())
+            logits = model(xb)
+            probs_batches.append(torch.sigmoid(logits).detach().cpu().numpy())
     probs = np.concatenate(probs_batches)
     auc = roc_auc_score(y, probs) if len(np.unique(y)) > 1 else float('nan')
     preds = (probs > 0.5).astype(int)
@@ -69,7 +70,11 @@ def main():
     parser.add_argument('--vital-features', nargs='+',
                         default=['HR', 'RespRate', 'Temp', 'NISysABP', 'NIDiasABP', 'SpO2'])
     parser.add_argument('--window', type=int, default=60, help='Window size in minutes')
-    parser.add_argument('--stride', type=int, default=1, help='Minutes between consecutive windows (decorrelates windows)')
+    parser.add_argument('--stride', type=int, default=15, help='Minutes between consecutive windows (decorrelates windows)')
+    parser.add_argument('--label-mode', choices=['all', 'last', 'proximity'], default='proximity',
+                        help="Windowing/labels: 'all' labels every window (noisy), 'last' keeps final window only, "
+                             "'proximity' keeps windows ending in the last --horizon-hours of the stay (recommended)")
+    parser.add_argument('--horizon-hours', type=float, default=12, help='Outcome horizon for proximity labeling')
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--lr', type=float, default=1e-3, help='Adam learning rate')
     parser.add_argument('--dropout', type=float, default=None, help='Dropout rate (default: model default)')
@@ -79,6 +84,8 @@ def main():
     parser.add_argument('--patience', type=int, default=5, help='Early stopping patience')
     parser.add_argument('--min-delta', type=float, default=0.001, help='Min AUC improvement for early stopping')
     parser.add_argument('--run-dir', default=None, help='Directory to store run outputs (model, logs, metrics)')
+    parser.add_argument('--no-deploy', action='store_true',
+                        help='Skip copying model/scaler to ml/models and ml/scaler.json (for smoke tests)')
     args = parser.parse_args()
 
     # create a run directory if not provided
@@ -99,21 +106,50 @@ def main():
         window_minutes=args.window,
         max_patients=args.max_patients,
         stride=args.stride,
+        label_mode=args.label_mode,
+        horizon_hours=args.horizon_hours,
     )
     logger.info(f'Loaded X={X.shape} y={y.shape}, class distribution: {np.bincount(y.astype(int))}')
 
     # Patient-level train/val split to prevent data leakage
     gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
     train_idx, val_idx = next(gss.split(X, y, groups=patient_ids))
-    X_train, y_train = X[train_idx], y[train_idx]
-    X_val, y_val = X[val_idx], y[val_idx]
+    X_train, y_train = X[train_idx].astype(np.float64), y[train_idx]
+    X_val, y_val = X[val_idx].astype(np.float64), y[val_idx]
     logger.info(f'Split: train={X_train.shape[0]} val={X_val.shape[0]} (patient-level)')
+
+    # Population normalization (Issue 1): statistics from TRAIN ONLY, so absolute
+    # severity is preserved. Per-patient z-scoring would erase it. NaNs (columns
+    # entirely missing for a patient) are filled with the training mean.
+    flat = X_train.reshape(-1, X_train.shape[-1])
+    train_mean = np.nanmean(flat, axis=0)
+    train_std = np.nanstd(flat, axis=0) + 1e-6
+    # A feature entirely missing from training (all-NaN) gets neutral stats:
+    # missing values filled with 0.0 then normalize to exactly 0.
+    train_mean = np.where(np.isnan(train_mean), 0.0, train_mean)
+    train_std = np.where(np.isnan(train_std), 1.0, train_std)
+    logger.info(f'Population stats per feature {args.vital_features}:')
+    for f, m, s in zip(args.vital_features, train_mean, train_std):
+        logger.info(f'  {f}: mean={m:.3f} std={s:.3f}')
+    X_train = (np.where(np.isnan(X_train), train_mean, X_train) - train_mean) / train_std
+    X_val = (np.where(np.isnan(X_val), train_mean, X_val) - train_mean) / train_std
+    X_train = X_train.astype(np.float32)
+    X_val = X_val.astype(np.float32)
+
+    scaler = {'features': args.vital_features,
+              'mean': [float(v) for v in train_mean],
+              'std': [float(v) for v in train_std]}
+    with open(os.path.join(run_dir, 'scaler.json'), 'w') as f:
+        json.dump(scaler, f, indent=2)
 
     # Compute pos_weight for class imbalance
     n_neg = int((y_train == 0).sum())
     n_pos = int((y_train == 1).sum())
     pos_weight = n_neg / max(1, n_pos)
     logger.info(f'Class imbalance: neg={n_neg} pos={n_pos} pos_weight={pos_weight:.2f}')
+    if not (3.0 <= pos_weight <= 12.0):
+        logger.warning(f'pos_weight={pos_weight:.2f} outside expected 3-12x range for PhysioNet 2012 '
+                       f'(~14% mortality) - check label windowing for artifacts')
 
     # ---- Early stopping training loop ----
     logger.info('Training AttentionLSTM with early stopping (patience=%d)...', args.patience)
@@ -199,11 +235,19 @@ def main():
     save_model(model, model_path)
     logger.info('Saved final model to %s', model_path)
 
-    # Copy to default inference location
-    default_model_path = 'ml/models/lstm_baseline.pt'
-    os.makedirs(os.path.dirname(default_model_path), exist_ok=True)
-    shutil.copy2(model_path, default_model_path)
-    logger.info('Copied model to %s', default_model_path)
+    # Copy to default inference location (unless smoke testing)
+    if not args.no_deploy:
+        default_model_path = 'ml/models/lstm_baseline.pt'
+        os.makedirs(os.path.dirname(default_model_path), exist_ok=True)
+        shutil.copy2(model_path, default_model_path)
+        logger.info('Copied model to %s', default_model_path)
+
+        # Copy scaler stats for inference (must use identical normalization live)
+        default_scaler_path = 'ml/scaler.json'
+        shutil.copy2(os.path.join(run_dir, 'scaler.json'), default_scaler_path)
+        logger.info('Copied scaler stats to %s', default_scaler_path)
+    else:
+        logger.info('Skipping deploy (--no-deploy)')
 
 
 if __name__ == '__main__':

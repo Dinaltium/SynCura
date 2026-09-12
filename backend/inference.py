@@ -40,6 +40,19 @@ class RiskScoreEngine:
         self._train_std = None
 
         self._load_model()
+        self._load_scaler()
+
+    def _load_scaler(self, scaler_path='ml/scaler.json'):
+        """Load population normalization stats saved during training."""
+        import json
+        if os.path.exists(scaler_path):
+            try:
+                with open(scaler_path) as f:
+                    scaler = json.load(f)
+                self.set_normalization_stats(scaler['mean'], scaler['std'])
+                print(f'[Inference] Loaded scaler stats from {scaler_path}')
+            except Exception as e:
+                print(f'[Inference] Warning: failed to load scaler: {e}')
 
     def _load_model(self):
         """Load the trained AttentionLSTM model."""
@@ -135,7 +148,7 @@ class RiskScoreEngine:
 
             with torch.no_grad():
                 x_tensor = torch.from_numpy(X.reshape(1, -1, X.shape[1]))
-                prob = self.model(x_tensor).item()
+                prob = torch.sigmoid(self.model(x_tensor)).item()
 
             return max(0, min(100, round(prob * 100)))
         except Exception as e:
