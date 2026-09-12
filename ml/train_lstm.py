@@ -48,21 +48,25 @@ class AttentionLSTMModel(nn.Module):
     The attention weights provide per-timestep interpretability, showing which
     moments in the patient's trajectory most influenced the risk prediction.
     """
-    def __init__(self, input_size, hidden_size=64, num_layers=2, dropout=0.3):
+    def __init__(self, input_size, hidden_size=64, num_layers=2, dropout=0.3, bidirectional=False):
         super().__init__()
+        self.bidirectional = bidirectional
+        self.hidden_size = hidden_size
         self.lstm = nn.LSTM(
             input_size, hidden_size, num_layers,
             batch_first=True,
-            dropout=dropout if num_layers > 1 else 0.0
+            dropout=dropout if num_layers > 1 else 0.0,
+            bidirectional=bidirectional,
         )
+        ctx = hidden_size * (2 if bidirectional else 1)
         self.attention = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size),
+            nn.Linear(ctx, ctx),
             nn.Tanh(),
-            nn.Linear(hidden_size, 1)
+            nn.Linear(ctx, 1)
         )
         self.dropout = nn.Dropout(dropout)
-        self.batch_norm = nn.BatchNorm1d(hidden_size)
-        self.fc = nn.Linear(hidden_size, 1)
+        self.batch_norm = nn.BatchNorm1d(ctx)
+        self.fc = nn.Linear(ctx, 1)
 
     def forward(self, x):
         lstm_out, _ = self.lstm(x)  # (batch, seq, hidden)
@@ -102,6 +106,8 @@ def train(
     optimizer=None,
     dropout=None,
     weight_decay=0.0,
+    hidden_size=None,
+    bidirectional=False,
 ):
     """Train LSTM on (X, y).
 
@@ -114,6 +120,7 @@ def train(
       continue training it instead of starting from scratch. Required for
       correct per-epoch training loops with early stopping.
     - `dropout`: dropout rate for models that support it (ignored otherwise).
+    - `hidden_size` / `bidirectional`: architecture overrides for supported models.
     - `weight_decay`: L2 regularization for Adam.
     - Returns `(model, optimizer)` so callers can keep training the same model.
     """
@@ -128,10 +135,19 @@ def train(
         if model_class is None:
             model_class = AttentionLSTMModel
         try:
-            kwargs = {} if dropout is None else {"dropout": dropout}
-            model = model_class(input_size=X.shape[-1], **kwargs).to(device)
+            kwargs = {}
+            if dropout is not None:
+                kwargs["dropout"] = dropout
+            if hidden_size is not None:
+                kwargs["hidden_size"] = hidden_size
+            # Only AttentionLSTMModel supports bidirectional; try, else retry plain
+            try:
+                model = model_class(input_size=X.shape[-1], bidirectional=bidirectional,
+                                    **kwargs).to(device)
+            except TypeError:
+                model = model_class(input_size=X.shape[-1], **kwargs).to(device)
         except TypeError:
-            # Model class does not support dropout (e.g. legacy LSTMModel)
+            # Model class does not support extra kwargs (e.g. legacy LSTMModel)
             model = model_class(input_size=X.shape[-1]).to(device)
     else:
         model = model.to(device)

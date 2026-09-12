@@ -78,6 +78,8 @@ def main():
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--lr', type=float, default=1e-3, help='Adam learning rate')
     parser.add_argument('--dropout', type=float, default=None, help='Dropout rate (default: model default)')
+    parser.add_argument('--hidden-size', type=int, default=64, help='LSTM hidden size')
+    parser.add_argument('--bidirectional', action='store_true', help='Use bidirectional LSTM (DEWS-style)')
     parser.add_argument('--weight-decay', type=float, default=0.0, help='Adam L2 regularization')
     parser.add_argument('--max-patients', type=int, default=None)
     parser.add_argument('--epochs', type=int, default=20)
@@ -173,6 +175,8 @@ def main():
             model=model,
             optimizer=opt,
             dropout=args.dropout,
+            hidden_size=args.hidden_size,
+            bidirectional=args.bidirectional,
             weight_decay=args.weight_decay,
         )
 

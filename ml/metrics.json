@@ -1,8 +1,23 @@
 {
-  "auc": 0.7523323427612703,
-  "accuracy": 0.5712901439645626,
-  "precision": 0.2332723470987977,
-  "recall": 0.8451704545454546,
-  "best_auc": 0.7523323427612703,
-  "epochs_trained": 9
+  "auc": 0.7978627373990249,
+  "accuracy": 0.7707547816548982,
+  "precision": 0.37547892720306514,
+  "recall": 0.6805555555555556,
+  "best_auc": 0.7978627373990249,
+  "epochs_trained": 11,
+  "config": "f12-h96-w90_r0",
+  "features": [
+    "HR",
+    "RespRate",
+    "Temp",
+    "NISysABP",
+    "NIDiasABP",
+    "SpO2",
+    "GCS",
+    "BUN",
+    "Creatinine",
+    "WBC",
+    "Platelets",
+    "Glucose"
+  ]
 }
