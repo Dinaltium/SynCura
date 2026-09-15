@@ -22,11 +22,12 @@ if not os.path.exists(DEFAULT_MODEL_PATH):
             DEFAULT_MODEL_PATH = runs[0]
 
 # Feature names used by the model (must match training)
-FEATURES = ['HR', 'RespRate', 'Temp', 'NISysABP', 'NIDiasABP', 'SpO2']
+FEATURES = ['HR', 'RespRate', 'Temp', 'NISysABP', 'NIDiasABP', 'SpO2',
+            'GCS', 'BUN', 'Creatinine', 'WBC', 'Platelets', 'Glucose']
 
 
 class RiskScoreEngine:
-    def __init__(self, model_path=DEFAULT_MODEL_PATH, window_size=60):
+    def __init__(self, model_path=DEFAULT_MODEL_PATH, window_size=90):
         """Load model and initialize risk score buffer."""
         self.model_path = model_path
         self.window_size = window_size
@@ -59,7 +60,7 @@ class RiskScoreEngine:
         if os.path.exists(self.model_path):
             try:
                 from ml.train_lstm import AttentionLSTMModel
-                self.model = AttentionLSTMModel(input_size=len(FEATURES))
+                self.model = AttentionLSTMModel(input_size=len(FEATURES), hidden_size=96)
                 try:
                     state = torch.load(self.model_path, map_location='cpu', weights_only=True)
                 except TypeError:
