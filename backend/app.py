@@ -173,6 +173,12 @@ class VitalRecord(BaseModel):
     NIDiasABP: Optional[float] = None
     SpO2: Optional[float] = None
     EtCO2: Optional[float] = None
+    GCS: Optional[float] = None
+    BUN: Optional[float] = None
+    Creatinine: Optional[float] = None
+    WBC: Optional[float] = None
+    Platelets: Optional[float] = None
+    Glucose: Optional[float] = None
 
 
 class TrainingConfig(BaseModel):
@@ -306,7 +312,7 @@ def explain_patient(patient_id: str):
     # Compute SHAP (may be slow, so keep nsamples small)
     try:
         from ml.explain import compute_shap_explanation
-        importance = compute_shap_explanation(inference_engine.model, X, FEATURE_NAMES, n_background=10)
+        importance = compute_shap_explanation(inference_engine.model, X, FEATURES, n_background=10)
     except Exception as e:
         importance = {"error": str(e)}
 
