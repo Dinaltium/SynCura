@@ -1,0 +1,29 @@
+{
+  "auc": 0.7744871807918804,
+  "accuracy": 0.7416192500171386,
+  "precision": 0.3401701941959415,
+  "recall": 0.6766493055555556,
+  "best_auc": 0.7744871807918804,
+  "epochs_trained": 19,
+  "config": "win7ft-cos-7e5",
+  "features": [
+    "HR",
+    "RespRate",
+    "Temp",
+    "NISysABP",
+    "NIDiasABP",
+    "SpO2",
+    "GCS",
+    "BUN",
+    "Creatinine",
+    "WBC",
+    "Platelets",
+    "Glucose"
+  ],
+  "window": 90,
+  "hidden_size": 96,
+  "dropout": 0.3,
+  "weight_decay": 1e-05,
+  "batch_size": 128,
+  "schedule": "cos"
+}

@@ -14,8 +14,11 @@ import torch
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import GroupShuffleSplit
 
-PHYSIONET_DIR = r"C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0\set-a"
-OUTCOMES_FILE = r"C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0\Outcomes-a.txt"
+BASE_DIR = r"C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0"
+PHYSIONET_DIR = os.path.join(BASE_DIR, "set-a_full", "set-a")
+OUTCOMES_FILE = os.path.join(BASE_DIR, "Outcomes-a.txt")
+HOLDOUT_DIR = os.path.join(BASE_DIR, "set-b_full", "set-b")
+HOLDOUT_OUTCOMES = os.path.join(BASE_DIR, "Outcomes-b.txt")
 VITAL_FEATURES_6 = ['HR', 'RespRate', 'Temp', 'NISysABP', 'NIDiasABP', 'SpO2']
 VITAL_FEATURES_12 = ['HR', 'RespRate', 'Temp', 'NISysABP', 'NIDiasABP', 'SpO2',
                       'GCS', 'BUN', 'Creatinine', 'WBC', 'Platelets', 'Glucose']
@@ -27,34 +30,36 @@ WINDOW = 60
 EPOCHS = 40
 PATIENCE = 12
 MIN_DELTA = 0.001
-REPEATS = 3
 
 # ── Config grid ──────────────────────────────────────────────────────────────
-# Round 5: beat the paper (0.87). Add ventilator params + deeper models.
+# Round 7: full set-a (4000 patients) train + set-b (4000 patients) holdout eval.
+# More data -> bigger models should win. Focus on 16 features (paper's vent params).
 CONFIGS = [
-    # 16 features (adds Lactate, pH, FiO2, MechVent — paper's "ventilator params")
+    # Previous best zone rerun on full data
+    ("f12-h96-w90", dict(hidden_size=96, batch_size=128, lr=3e-4, stride=15, dropout=0.3, features=VITAL_FEATURES_12, window=90)),
+    ("f12-h128-w90", dict(hidden_size=128, batch_size=128, lr=3e-4, stride=15, dropout=0.3, features=VITAL_FEATURES_12, window=90)),
+    ("f12-h192-w90", dict(hidden_size=192, batch_size=128, lr=3e-4, stride=15, dropout=0.3, features=VITAL_FEATURES_12, window=90)),
+    # 16 features (ventilator params) — paper's approach
+    ("f16-h96-w90", dict(hidden_size=96, batch_size=128, lr=3e-4, stride=15, dropout=0.3, features=VITAL_FEATURES_16, window=90)),
     ("f16-h128-w90", dict(hidden_size=128, batch_size=128, lr=3e-4, stride=15, dropout=0.3, features=VITAL_FEATURES_16, window=90)),
     ("f16-h128-w90-do04", dict(hidden_size=128, batch_size=128, lr=3e-4, stride=15, dropout=0.4, features=VITAL_FEATURES_16, window=90)),
     ("f16-h128-w90-lr2e4", dict(hidden_size=128, batch_size=128, lr=2e-4, stride=15, dropout=0.3, features=VITAL_FEATURES_16, window=90)),
     ("f16-h128-w90-bi", dict(hidden_size=128, batch_size=128, lr=3e-4, stride=15, dropout=0.3, features=VITAL_FEATURES_16, window=90, bidirectional=True)),
-    # 16 features + 120min window
-    ("f16-h128-w120", dict(hidden_size=128, batch_size=128, lr=3e-4, stride=15, dropout=0.3, features=VITAL_FEATURES_16, window=120)),
-    ("f16-h128-w120-do04", dict(hidden_size=128, batch_size=128, lr=3e-4, stride=15, dropout=0.4, features=VITAL_FEATURES_16, window=120)),
-    # 16 features + h=192 (bigger model)
     ("f16-h192-w90", dict(hidden_size=192, batch_size=128, lr=3e-4, stride=15, dropout=0.3, features=VITAL_FEATURES_16, window=90)),
     ("f16-h192-w90-do04", dict(hidden_size=192, batch_size=128, lr=3e-4, stride=15, dropout=0.4, features=VITAL_FEATURES_16, window=90)),
-    # 12 features + h=192 (compare)
-    ("f12-h192-w90", dict(hidden_size=192, batch_size=128, lr=3e-4, stride=15, dropout=0.3, features=VITAL_FEATURES_12, window=90)),
+    # Longer window
+    ("f16-h128-w120", dict(hidden_size=128, batch_size=128, lr=3e-4, stride=15, dropout=0.3, features=VITAL_FEATURES_16, window=120)),
+    ("f12-h128-w120", dict(hidden_size=128, batch_size=128, lr=3e-4, stride=15, dropout=0.3, features=VITAL_FEATURES_12, window=120)),
 ]
 
-REPEATS = 1  # run each config N times for stability
+REPEATS = 1
 
 
 def load_and_split(vital_features, window):
     """Load data with given features/window, compute normalization from train split."""
     from ml.dataset import load_and_create_sequences
 
-    print(f"Loading data: {len(vital_features)} features, window={window}min ...")
+    print(f"Loading set-a data: {len(vital_features)} features, window={window}min ...")
     X, y, patient_ids = load_and_create_sequences(
         physionet_dir=PHYSIONET_DIR,
         outcomes_file=OUTCOMES_FILE,
@@ -90,7 +95,40 @@ def load_and_split(vital_features, window):
     return X_train, y_train, X_val, y_val, scaler
 
 
-def train_single(X_train, y_train, X_val, y_val, cfg_name, cfg_kwargs, run_dir):
+HOLDOUT_CACHE = {}
+
+
+def load_holdout(vital_features, window, scaler):
+    """Load the set-b holdout (4000 patients) with matching features/window."""
+    key = (tuple(vital_features), window)
+    if key in HOLDOUT_CACHE:
+        return HOLDOUT_CACHE[key]
+
+    from ml.dataset import load_and_create_sequences
+
+    print(f"Loading set-b holdout: {len(vital_features)} features, window={window}min ...")
+    X, y, patient_ids = load_and_create_sequences(
+        physionet_dir=HOLDOUT_DIR,
+        outcomes_file=HOLDOUT_OUTCOMES,
+        vital_features=vital_features,
+        window_minutes=window,
+        max_patients=None,
+        stride=15,
+        label_mode='proximity',
+        horizon_hours=12,
+    )
+    print(f"  Holdout X={X.shape} y={y.shape}, dist={np.bincount(y.astype(int))}")
+
+    X = X.astype(np.float64)
+    mean = np.array(scaler['mean'])
+    std = np.array(scaler['std'])
+    X = (np.where(np.isnan(X), mean, X) - mean) / std
+    X = X.astype(np.float32)
+    HOLDOUT_CACHE[key] = (X, y, patient_ids)
+    return HOLDOUT_CACHE[key]
+
+
+def train_single(X_train, y_train, X_val, y_val, cfg_name, cfg_kwargs, run_dir, features, window):
     """Train one config, return metrics dict."""
     from ml.train_lstm import train as quick_train, AttentionLSTMModel
     from ml.train import evaluate_model
@@ -145,6 +183,13 @@ def train_single(X_train, y_train, X_val, y_val, cfg_name, cfg_kwargs, run_dir):
     final['best_auc'] = best_auc
     final['epochs_trained'] = epoch + 1
     final['config'] = cfg_name
+    final['features'] = list(features)
+    final['window'] = window
+    final['hidden_size'] = hidden_size
+    final['bidirectional'] = bool(bidirectional)
+    final['batch_size'] = batch_size
+    final['lr'] = lr
+    final['dropout'] = dropout
 
     os.makedirs(run_dir, exist_ok=True)
     torch.save(model.state_dict(), os.path.join(run_dir, 'model.pt'))
@@ -189,7 +234,7 @@ def main():
                 print(f"{'='*60}")
                 run_dir = os.path.join(run_base, rep_name)
 
-                metrics = train_single(X_train, y_train, X_val, y_val, rep_name, dict(cfg_kwargs), run_dir)
+                metrics = train_single(X_train, y_train, X_val, y_val, rep_name, dict(cfg_kwargs), run_dir, list(feats), win)
                 all_results.append((rep_name, metrics['auc'], metrics))
 
                 auc = metrics['auc']
@@ -241,6 +286,24 @@ def main():
         json.dump(overall_best['scaler'], f, indent=2)
 
     deploy_metrics = {k: v for k, v in overall_best.items() if k not in ('run_dir', 'scaler')}
+
+    # Evaluate deployed best on set-b holdout (4000 patients, unseen set)
+    from ml.train_lstm import AttentionLSTMModel
+    from ml.train import evaluate_model
+
+    holdout_X, holdout_y, _ = load_holdout(overall_best['features'], overall_best['window'], overall_best['scaler'])
+    model = AttentionLSTMModel(input_size=len(overall_best['features']),
+                               hidden_size=overall_best.get('hidden_size', 96),
+                               dropout=overall_best.get('dropout', 0.3),
+                               bidirectional=overall_best.get('bidirectional', False))
+    model.load_state_dict(torch.load(best_model_src))
+    model.eval()
+    holdout_metrics = evaluate_model(model, holdout_X, holdout_y)
+    holdout_metrics = {f'holdout_{k}': v for k, v in holdout_metrics.items()}
+    print(f"\n  SET-B HOLDOUT (4000 patients): AUC={holdout_metrics['holdout_auc']:.4f} "
+          f"Acc={holdout_metrics['holdout_accuracy']:.4f} Rec={holdout_metrics['holdout_recall']:.4f}")
+    deploy_metrics.update(holdout_metrics)
+
     with open(os.path.join('ml', 'metrics.json'), 'w') as f:
         json.dump(deploy_metrics, f, indent=2)
 

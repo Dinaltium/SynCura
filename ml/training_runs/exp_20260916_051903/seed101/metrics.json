@@ -25,9 +25,5 @@
   "dropout": 0.3,
   "weight_decay": 0.0001,
   "batch_size": 128,
-  "seed": 101,
-  "holdout_auc": 0.7651,
-  "holdout_accuracy": 0.7463,
-  "holdout_recall": 0.6692,
-  "holdout_set": "set-b (4000 patients, label_mode=proximity, w=90, stride=15)"
+  "seed": 101
 }

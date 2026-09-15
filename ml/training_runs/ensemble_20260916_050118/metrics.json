@@ -1,0 +1,32 @@
+{
+  "config": "ensemble-logitavg-10x-f12-h96-w90",
+  "features": [
+    "HR",
+    "RespRate",
+    "Temp",
+    "NISysABP",
+    "NIDiasABP",
+    "SpO2",
+    "GCS",
+    "BUN",
+    "Creatinine",
+    "WBC",
+    "Platelets",
+    "Glucose"
+  ],
+  "window": 90,
+  "hidden_size": 96,
+  "bidirectional": false,
+  "dropout": 0.3,
+  "auc": 0.7895137362388849,
+  "best_auc": 0.7895137362388849,
+  "accuracy": 0.7394940700623843,
+  "recall": 0.6875,
+  "epochs_trained": "-",
+  "n_models": 10,
+  "swa_val_auc": 0.7114108033517418,
+  "logitavg_val_auc": 0.7895137362388849,
+  "holdout_auc": 0.7099248855338861,
+  "holdout_accuracy": 0.8577154308617234,
+  "holdout_recall": 0.0
+}

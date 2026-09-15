@@ -1,0 +1,29 @@
+{
+  "auc": 0.7764880442538016,
+  "accuracy": 0.728936724480702,
+  "precision": 0.3210412147505423,
+  "recall": 0.6423611111111112,
+  "best_auc": 0.7764880442538016,
+  "epochs_trained": 17,
+  "config": "stp6-seed202",
+  "features": [
+    "HR",
+    "RespRate",
+    "Temp",
+    "NISysABP",
+    "NIDiasABP",
+    "SpO2",
+    "GCS",
+    "BUN",
+    "Creatinine",
+    "WBC",
+    "Platelets",
+    "Glucose"
+  ],
+  "window": 90,
+  "hidden_size": 96,
+  "dropout": 0.3,
+  "weight_decay": 0.0001,
+  "batch_size": 128,
+  "seed": 202
+}
