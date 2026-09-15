@@ -1,0 +1,29 @@
+{
+  "auc": 0.7399752198647903,
+  "accuracy": 0.7273058979905653,
+  "precision": 0.29255641047808423,
+  "recall": 0.597457627118644,
+  "best_auc": 0.7399752198647903,
+  "epochs_trained": 13,
+  "config": "f12-h96-w90_r0",
+  "features": [
+    "HR",
+    "RespRate",
+    "Temp",
+    "NISysABP",
+    "NIDiasABP",
+    "SpO2",
+    "GCS",
+    "BUN",
+    "Creatinine",
+    "WBC",
+    "Platelets",
+    "Glucose"
+  ],
+  "window": 90,
+  "hidden_size": 96,
+  "bidirectional": false,
+  "batch_size": 128,
+  "lr": 0.0003,
+  "dropout": 0.3
+}
