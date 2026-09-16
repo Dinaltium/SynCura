@@ -233,23 +233,24 @@ After training with AttentionLSTM + early stopping:
 | Precision | 75-85% | -- |
 | Recall | 60-80% | DEWS: 88% [8] |
 
-**Achieved on PhysioNet 2012 (patient-level 80/20 holdout):**
+**Achieved on PhysioNet 2012 (patient-level 80/20 holdout, val=original stride-15 split):**
 
-| Version | Config | AUC-ROC |
-|---------|--------|---------|
-| Baseline 6-feature | HR/RR/Temp/SBP/DBP/SpO2 | 0.601 |
-| + Population normalization (train-only stats) | 6 features | 0.666 |
-| + SaO2 alias (PhysioNet has no SpO2 column) | 6 features | 0.752 |
-| + 6 lab features (GCS, BUN, Creatinine, WBC, Platelets, Glucose) | 12 features | 0.794 |
-| + 90-min window | 12 features, w=90, h=96 | 0.798 |
-| + Step-decay LR schedule (multi-seed) | 12 features, w=90, h=96 | **0.807** |
+| Version | Config | Val AUC | Set-B Holdout AUC |
+|---------|--------|---------|-------------------|
+| Baseline 6-feature | HR/RR/Temp/SBP/DBP/SpO2 | 0.601 | -- |
+| + Population normalization | 6 features | 0.666 | -- |
+| + SaO2 alias | 6 features | 0.752 | -- |
+| + 6 lab features | 12 features | 0.794 | -- |
+| + 90-min window | 12 features, w=90, h=96 | 0.798 | -- |
+| + Step-decay LR (multi-seed) | 12 features, w=90, h=96 | 0.807 | 0.765 |
+| + Full set-a training (3200 patients) | 12 features, w=90, h=96 | **0.833** | **0.806** |
 
-The deployed model (AUC 0.807) uses 12 features, a 90-minute sliding window,
-hidden size 96, Adam with weight decay and a step-decay learning-rate schedule.
-Full PhysioNet 2012 set-a (4,000 patients) was extracted for training and the
-model was additionally evaluated on the completely unseen set-b holdout (4,000
-patients): **AUC 0.765** (accuracy 0.746, recall 0.669) on the external set-b
-split, demonstrating generalization beyond the training cohort.
+The deployed model (val AUC 0.833) uses 12 features, a 90-minute sliding window,
+hidden size 96, Adam with weight decay (1e-4), and a step-decay learning-rate
+schedule. Training uses the full PhysioNet 2012 set-a (4,000 patients, excluding
+the 20% held-out validation cohort). The set-b holdout (4,000 fully unseen
+patients, evaluated at stride-15) gives AUC 0.806, demonstrating strong
+generalization beyond the training distribution.
 
 #### 6.2 Comparison with NEWS2
 

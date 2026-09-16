@@ -1,0 +1,33 @@
+{
+  "config": "f20-lr2e4-s6",
+  "features": [
+    "HR",
+    "RespRate",
+    "Temp",
+    "NISysABP",
+    "NIDiasABP",
+    "SpO2",
+    "GCS",
+    "BUN",
+    "Creatinine",
+    "WBC",
+    "Platelets",
+    "Glucose",
+    "K",
+    "Na",
+    "HCO3",
+    "Mg",
+    "HCT",
+    "pH",
+    "PaO2",
+    "PaCO2"
+  ],
+  "best_auc": 0.7267944785362787,
+  "val_auc": 0.7267944785362787,
+  "val_accuracy": 0.7002125179954755,
+  "val_recall": 0.5881076388888888,
+  "lr": 0.0002,
+  "wd": 0.0001,
+  "step_every": 6,
+  "seed": 11
+}
