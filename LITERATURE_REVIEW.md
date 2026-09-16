@@ -6,19 +6,18 @@ This review positions SynCura relative to one adapted base paper and eight suppo
 
 ## 1. Base Paper
 
-**Wang, Y., Bai, Y., & Jin, G. (2026).** Explainable Deep-Learning Models to Predict Diaphragmatic Dysfunction and Cognitive Stress in ICU Patients Under Mechanical Ventilation. *Frontiers in Physiology*, 17, 1765898. https://doi.org/10.3389/fphys.2026.1765898
+**Zheng, Z., Luo, J., Zhu, Y., Du, L., Lan, L., Zhou, X., Yang, X., & Huang, S. (2025).** Development and Validation of a Dynamic Real-Time Risk Prediction Model for ICU Patients Based on Longitudinal Irregular Data: Multicenter Retrospective Study. *Journal of Medical Internet Research*, 27, e69293. https://doi.org/10.2196/69293
 
-Wang et al. train LSTM, GRU, and RNN models on continuous clinical time-series (vital signs and ventilator parameters) from 25,751 mechanically ventilated ICU patients across multiple centers, comparing performance on three outcomes. Their LSTM consistently outperforms the baseline RNN and is the paper's headline architecture:
+Zheng et al. develop a **time-aware bidirectional attention-based long short-term memory (TBAL)** model that continuously assesses in-hospital ICU mortality risk from irregular, longitudinal electronic medical records (vital signs, labs, and medications) updated hourly. Trained on 176,344 ICU stays from MIMIC-IV and externally cross-validated on eICU-CRD (multicenter), the model spans two tasks:
 
-| Outcome | AUC | AUPRC / Sensitivity |
+| Task | MIMIC-IV AUROC | eICU-CRD AUROC |
 |---|---|---|
-| Diaphragmatic dysfunction | 0.845 | AUPRC 0.594 |
-| Composite adverse outcome | 0.868 | Sensitivity 81.5% |
-| High cognitive stress / delirium | 0.792 (vs. 0.715 RNN) | — |
+| Static (key time point) | 0.959 | — |
+| Dynamic (real-time, hourly) | 0.936 | 0.919 (recall 79.1%) |
 
-**Why this is SynCura's base paper:** it is the closest architectural match in this review — an explainable LSTM trained on continuous, longitudinal physiologic time-series, evaluated with AUC/AUPRC, exactly the setup SynCura's `AttentionLSTM` targets. Its 0.79–0.87 AUC range is a realistic, in-reach adaptation target rather than an unreachable ceiling, since their inputs (vitals + ventilator parameters) are only modestly richer than SynCura's six vitals. The paper also explicitly names a limitation directly relevant to SynCura's own scope: **time-series signals alone did not adequately capture the weakest outcome (cognitive stress)**, motivating future multimodal fusion rather than presenting it as solved — an honest limitation SynCura should carry over rather than overclaim past.
+**Why this is SynCura's base paper:** it is the closest architectural *and* task match in this review — an attention-based LSTM that produces real-time, interpretable ICU mortality/deterioration risk from physiological time-series, exactly the setup SynCura's `AttentionLSTM` targets. The time-aware attention mechanism dynamically weights time points to prioritize the most relevant information per prediction, directly mirroring SynCura's temporal-attention design for per-timestep interpretability. Its dynamic AUROC of 0.936 is a realistic, in-reach performance ladder rather than an unreachable ceiling: Zheng et al. use richer, multimodal EMR inputs (labs, medications, irregular-time awareness) and much larger multi-database training, whereas SynCura intentionally keeps a focused 12-vital-sign window for streaming, low-latency deployment.
 
-**Adaptation plan:** mirror their LSTM-centric, explainability-first design, but substitute PhysioNet 2012 for their ventilator-cohort data and add temporal attention (their comparison is limited to RNN/GRU/LSTM, with no attention variant).
+**Adaptation plan:** mirror their time-aware attention + bidirectional LSTM design on PhysioNet 2012 data, substitute their richer EMR input with SynCura's 12-feature 90-minute vital-sign window, and add SHAP-based feature-level explainability alongside temporal attention weights (their interpretation relies on attention plus Integrated Gradients).
 
 ---
 
@@ -70,7 +69,7 @@ Uses graph attention networks rather than temporal attention to model inter-vari
 
 | # | Paper | Year | Role in SynCura's review | Key number |
 |---|---|---|---|---|
-| Base | Wang, Bai & Jin | 2026 | Architecture to adapt | AUC 0.79–0.87 |
+| Base | Zheng et al. | 2025 | Architecture + task to adapt (attention-LSTM, real-time ICU mortality) | Dynamic AUROC 0.936 |
 | S1 | Yan et al. | 2026 | Realistic LSTM target | AUC 0.802 |
 | S2 | Sadanandan | 2026 | Field benchmark + multimodal (notes) | AUC 0.786; field range 0.70–0.85 |
 | S3 | Wu et al. | 2024 | Vitals-only upper bound | AUC 0.926 |

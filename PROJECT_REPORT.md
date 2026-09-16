@@ -6,11 +6,11 @@
 
 ### Base Paper
 
-**Wang, Y., Bai, Y., & Jin, G. (2026).** Explainable Deep-Learning Models to Predict Diaphragmatic Dysfunction and Cognitive Stress in ICU Patients Under Mechanical Ventilation. *Frontiers in Physiology*, 17, 1765898. https://doi.org/10.3389/fphys.2026.1765898
+**Zheng, Z., Luo, J., Zhu, Y., Du, L., Lan, L., Zhou, X., Yang, X., & Huang, S. (2025).** Development and Validation of a Dynamic Real-Time Risk Prediction Model for ICU Patients Based on Longitudinal Irregular Data: Multicenter Retrospective Study. *Journal of Medical Internet Research*, 27, e69293. https://doi.org/10.2196/69293
 
-LSTM on continuous clinical time-series from 25,751 ventilated ICU patients (AUC 0.79–0.87 across outcomes). Closest architectural match to SynCura's explainable LSTM on longitudinal vitals; realistic adaptation target. See `LITERATURE_REVIEW.md` for the full review (base + 8 supporting papers).
+Time-aware bidirectional attention-based LSTM (TBAL) on 176,344 ICU stays (MIMIC-IV + eICU external cross-validation), dynamic AUROC 0.936 with hourly real-time risk updates. Closest architectural and task match to SynCura's AttentionLSTM on longitudinal vitals; realistic adaptation target. See `LITERATURE_REVIEW.md` for the full review (base + 8 supporting papers).
 
-**Adaptation:** mirror their LSTM-centric, explainability-first design on PhysioNet 2012 six-vital data, plus temporal attention (absent in their RNN/GRU/LSTM comparison).
+**Adaptation:** mirror their time-aware attention + LSTM design on PhysioNet 2012 data, substitute their richer EMR input with SynCura's 12-feature 90-minute vital-sign window, and add SHAP-based feature-level explainability alongside temporal attention weights.
 
 ---
 
@@ -328,7 +328,7 @@ cd frontend && npm install && npm run dev
 
 ### 10. References
 
-**[BASE]** GARLIC: "Graph Attention-based Relational Learning of Multivariate Time Series in Intensive Care," *arXiv:2608.10969, ICLR 2026*. (Base Paper)
+**[BASE]** Z. Zheng et al., "Development and Validation of a Dynamic Real-Time Risk Prediction Model for Intensive Care Units Patients Based on Longitudinal Irregular Data," *J Med Internet Res*, vol. 27, e69293, 2025. (Base Paper)
 
 [1] T. I. Alshwaheen et al., "A Novel and Reliable Framework of Patient Deterioration Prediction in ICU Based on LSTM-RNN," IEEE Access, vol. 9, 2021.
 

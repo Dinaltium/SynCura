@@ -21,7 +21,7 @@ The review has four objectives:
 
 | No. | Study | Main approach | Data or setting | Reported finding | Relevance to SynCura |
 |---|---|---|---|---|---|
-| 1 | Wang, Bai and Jin, 2026 | Explainable LSTM, GRU, and RNN | 25,751 mechanically ventilated ICU patients; vital and ventilator time-series | LSTM AUC approximately 0.79-0.87 across three outcomes | Main base paper and explainability reference |
+| 1 | Zheng et al., 2025 | Time-aware bidirectional attention LSTM (TBAL) | 176,344 ICU stays; MIMIC-IV and eICU multicenter data | Dynamic AUROC 0.936; external cross-validation | Main base paper: attention-LSTM for real-time ICU mortality risk |
 | 2 | Yan et al., 2026 | LSTM, GRU, RNN, Transformer, Informer, and stacking | Long-term sequential ICU data with multicenter validation | Plain LSTM AUC 0.802; external performance lower than internal performance | Supports a realistic LSTM benchmark |
 | 3 | Sadanandan, 2026 | Time-series LSTM with ClinicalBERT and cross-modal attention | MIMIC-IV ICU data and clinical notes | AUROC 0.7857 and AUPRC 0.1908 | Shows the benefit and complexity of multimodal extension |
 | 4 | Wu et al., 2024 | Vital-sign-based LSTM and classical baselines | MIMIC-III and independent hospital data | LSTM AUC approximately 0.9263 | Provides a strong upper-bound reference for vital-sign modeling |
@@ -34,13 +34,13 @@ The review has four objectives:
 
 ## 4. Study-wise Review
 
-### 4.1 Wang, Bai and Jin: Explainable Deep-Learning Models
+### 4.1 Zheng et al.: Dynamic Attention-LSTM for ICU Mortality Risk
 
-Wang, Bai, and Jin investigate explainable deep-learning models for predicting diaphragmatic dysfunction, cognitive stress, and a composite adverse outcome in mechanically ventilated ICU patients. Their work compares LSTM, GRU, and RNN models using longitudinal physiological and ventilator data.
+Zheng et al. develop a time-aware bidirectional attention-based LSTM (TBAL) to continuously assess ICU mortality risk from irregular, longitudinal electronic medical record data updated hourly. The model is trained and externally cross-validated across 176,344 ICU stays from MIMIC-IV and the eICU Collaborative Research Database.
 
-The LSTM performs consistently well, with reported AUC values in the approximate range of 0.79 to 0.87. The study is important to SynCura because it combines longitudinal clinical data with an explainability-first design. It also reports that time-series signals alone are not equally strong for every outcome, which supports a cautious interpretation of model predictions.
+The TBAL model achieves a dynamic AUROC of 0.936 on MIMIC-IV and 0.919 on eICU, with high recall for positive cases. The study is the main base for SynCura because it directly combines an attention-based LSTM with real-time ICU risk prediction and interpretability, which is exactly the setup SynCura's `AttentionLSTM` targets.
 
-SynCura adapts the LSTM-centered design to PhysioNet 2012, adds temporal attention, and focuses on real-time inference through a FastAPI service and dashboard.
+SynCura adapts the time-aware attention-LSTM design to PhysioNet 2012 data, substitutes a focused 12-feature 90-minute vital-sign window for the richer EMR input, and adds SHAP feature-level explainability alongside temporal attention weights.
 
 ### 4.2 Yan et al.: Long-Term Sequential ICU Prediction
 
@@ -149,7 +149,7 @@ Future work should focus on calibration, false-alarm analysis, lead-time measure
 
 ## 10. References
 
-[1] Y. Wang, Y. Bai, and G. Jin, "Explainable Deep-Learning Models to Predict Diaphragmatic Dysfunction and Cognitive Stress in ICU Patients Under Mechanical Ventilation," *Frontiers in Physiology*, vol. 17, Art. no. 1765898, 2026.
+[1] Z. Zheng, J. Luo, Y. Zhu, L. Du, L. Lan, X. Zhou, X. Yang, and S. Huang, "Development and Validation of a Dynamic Real-Time Risk Prediction Model for Intensive Care Units Patients Based on Longitudinal Irregular Data," *J Med Internet Res*, vol. 27, Art. no. e69293, 2025.
 
 [2] Z. Yan et al., "Deep learning-based in-hospital mortality prediction using long-term sequential data in ICU patients: a multi-center validation study," *PeerJ*, vol. 14, Art. no. e21631, 2026.
 
