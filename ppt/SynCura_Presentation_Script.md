@@ -2,148 +2,140 @@
 
 ## Suggested Duration
 
-Approximately 8 to 10 minutes. Spend the most time on the methodology and experimental results.
+Approximately 8 to 10 minutes. Keep the problem and proposed solution clear, and spend extra time on the base paper and methodology.
 
-## Slide 1: Title
+## Slide 1: Title and Team Details
 
 Good morning/afternoon everyone.
 
 We are presenting our project, **SynCura: Predictive ICU Monitoring System Using Attention-Based LSTM with Real-Time Explainability**.
 
-SynCura is a software prototype designed to identify the risk of patient deterioration in an intensive care unit. The project combines machine learning, a backend inference service, a web dashboard, and explainability methods.
+SynCura is a software-based predictive ICU monitoring prototype. It uses an attention-based LSTM to estimate deterioration risk from recent clinical measurements, provides explanations for the prediction, and displays the result through a dashboard.
 
-The team members are Abdul Ahad Ikkeri, Fathima Reeha, and Fizan Feroz. In this presentation, we will explain the problem, the proposed approach, the system architecture, our results, and the future scope.
+Our team members are Abdul Ahad Ikkeri, Fathima Reeha, and Fizan Feroz. Their USNs are shown on the slide.
 
-## Slide 2: Abstract
+## Slide 2: Problem Statement
 
-The main objective of SynCura is to provide an early warning of ICU deterioration by analyzing recent patient measurements rather than looking at only one reading.
+ICU patients can deteriorate rapidly, and early identification is important for timely clinical review.
 
-Our system uses an attention-based LSTM model. It processes 12 clinical features from the PhysioNet 2012 Challenge using 90-minute sliding windows.
+Current scores such as NEWS2 and SOFA use thresholds and structured assessments. These tools are useful and clinically familiar, but they do not directly learn the complete temporal pattern of changing patient observations.
 
-The machine learning model is implemented using PyTorch. A FastAPI backend provides real-time inference, and a React dashboard displays patient risk and explanations. SHAP is used for feature-level importance, while temporal attention shows which recent time steps influenced the prediction.
+A single reading may not show whether a patient is improving, remaining stable, or gradually deteriorating. Our problem is to build an early-warning aid that analyzes recent patient history and produces an understandable risk estimate.
 
-In the current experiment, the model achieved an AUC of 0.807 on validation data and 0.765 on an unseen set-B holdout. These results demonstrate the feasibility of the prototype, but they do not represent clinical deployment readiness.
+SynCura is a research prototype. It is not intended to replace clinicians or make autonomous medical decisions.
 
-## Slide 3: Introduction
+## Slide 3: Motivation / Need for the Project
 
-ICU patients can deteriorate quickly, so detecting risk early is important for timely clinical intervention.
+We selected this problem because deterioration is often a process rather than a single event. Continuous ICU data contains trends and interactions that may be difficult to summarize manually.
 
-Existing scores such as NEWS2 and SOFA are useful clinical tools, but they are mainly rule-based and threshold-driven. They summarize the patient's condition at an assessment point and do not directly learn the full temporal pattern of changing observations.
+Earlier warning can provide more time for clinicians to review the patient and decide on an intervention.
 
-SynCura addresses this limitation by using a temporal deep-learning model. Instead of considering only the latest value, it analyzes a recent sequence of measurements.
+Explainability is also important. A risk score alone is not sufficient; users should be able to inspect which recent time steps and which features influenced the prediction.
 
-It is important to clarify that SynCura is an explainable monitoring prototype. It is not intended to replace clinicians or make autonomous clinical decisions.
+Therefore, SynCura combines temporal modeling, real-time inference, a dashboard, and explanations in one workflow.
 
-## Slide 4: Literature Survey
+## Slide 4: Existing System / Related Work
 
-We reviewed research covering explainable LSTM models, attention mechanisms, ICU mortality prediction, wearable monitoring, and graph-based approaches.
+In current practice, NEWS2 and SOFA provide structured, interpretable scoring based on clinical thresholds. Their main advantage is simplicity, but they do not learn temporal patterns in the same way as a sequence model.
 
-The base paper by Wang, Bai, and Jin uses explainable LSTM models on continuous ICU time-series data and reports AUC values from 0.79 to 0.87 across multiple outcomes.
+Recent research explores LSTM, attention, transformer, multimodal, wearable, and graph-based approaches for ICU prediction.
 
-Yan and colleagues show that a plain LSTM can perform competitively on long-term ICU sequential data. Wu and colleagues provide a strong reference for vital-sign-based mortality prediction using an LSTM.
+The reported performance varies considerably because studies use different datasets, labels, sampling strategies, missing-data methods, and evaluation splits.
 
-Nguyen and colleagues are particularly relevant because their work establishes the connection between attention mechanisms and ICU risk prediction on PhysioNet data.
+From this review, we identify a practical gap: many studies focus on model performance, while SynCura focuses on connecting temporal prediction, real-time serving, dashboard visualization, and explanation.
 
-Other studies explore multimodal learning, data recovery, wearable monitoring, graph attention, and interpretable early-warning systems.
+## Slide 5: Base Paper / Reference Paper
 
-The gap identified from this review is the need for a practical system that combines temporal modeling, explanations, real-time inference, and a usable dashboard in one prototype.
+Our base paper is titled **Explainable Deep-Learning Models to Predict Diaphragmatic Dysfunction and Cognitive Stress in ICU Patients Under Mechanical Ventilation**.
 
-## Slide 5: Problem Statement
+The authors are Wang, Bai, and Jin. It was published in 2026 in *Frontiers in Physiology*, volume 17, article 1765898.
 
-The problem is that ICU deterioration is difficult to identify early from isolated measurements and manual calculations.
+The study uses data from 25,751 mechanically ventilated ICU patients and compares LSTM, GRU, and RNN models using continuous physiological and ventilator time-series.
 
-A single value may not be dangerous by itself, but its direction, duration, and relationship with other measurements may indicate deterioration. Rule-based scores do not always capture these patterns.
+The main findings are that LSTM performs consistently well, with reported AUC values approximately between 0.79 and 0.87 across outcomes. The paper also emphasizes explainability for clinical trust.
 
-Clinicians therefore need an early-warning aid that can process recent patient history and explain the reasons behind its risk estimate.
+An important limitation is that time-series signals are not equally strong for every clinical outcome. SynCura adapts the LSTM idea to PhysioNet 2012, adds temporal attention, and implements real-time inference and dashboard visualization.
 
-Our specific problem is to build and evaluate a real-time, explainable prototype using clinical time-series data, while clearly recognizing that further clinical validation is required before real-world use.
+## Slide 6: Proposed Solution
 
-## Slide 6: Proposed Methodology
+Our proposed solution is SynCura, an attention-based LSTM that reads a rolling 90-minute window of 12 clinical features.
 
-The dataset used is the PhysioNet 2012 Challenge dataset. We use 12 features: heart rate, respiratory rate, temperature, systolic blood pressure, diastolic blood pressure, oxygen saturation, GCS, BUN, creatinine, WBC, platelets, and glucose.
+The features include heart rate, respiratory rate, temperature, systolic and diastolic blood pressure, oxygen saturation, GCS, BUN, creatinine, WBC, platelets, and glucose.
 
-The data is interpolated to create a regular time sequence. We use train-only population statistics for Z-score normalization so that information from the validation set does not leak into training.
+The system returns a risk score from 0 to 100. It also provides two types of explanations: temporal attention identifies influential time steps, and SHAP identifies influential features.
 
-The model reads 90-minute windows with a 15-minute stride. It contains a two-layer LSTM with hidden size 96. An additive temporal attention layer assigns importance to different time steps. Dropout and batch normalization improve regularization and training stability.
+Compared with the base paper, our main difference is the combination of temporal attention, real-time FastAPI serving, React visualization, and an explainability-focused dashboard.
 
-The model output is converted into a risk score from 0 to 100. The FastAPI backend performs inference, while the React dashboard displays risk, trends, and explanations. SHAP provides feature-level importance, and attention provides time-step-level importance.
+## Slide 7: Methodology / Proposed Approach
 
-## Slide 7: Experimental Result
+First, we use the PhysioNet 2012 Challenge dataset and select 12 clinical features.
 
-On the validation set, the model achieved an AUC-ROC of 0.8072, accuracy of 0.7450, precision of 0.3535, and recall of 0.7413.
+Next, measurements are interpolated and prepared as regular sequences. We use a 90-minute window with a 15-minute stride. Population normalization statistics are calculated from the training data only to avoid data leakage.
 
-We also evaluated the model on an unseen set-B holdout. It achieved an AUC-ROC of 0.7651, accuracy of 0.7463, and recall of 0.6692.
+The model is a two-layer LSTM with hidden size 96, dropout, batch normalization, and additive temporal attention. The model produces a risk probability, which is displayed as a score from 0 to 100.
 
-The holdout result is lower than the validation result, which is expected when testing on unseen data. It still indicates some generalization, but it also shows that the model is not ready for clinical deployment.
+The FastAPI backend accepts data and performs inference. The React dashboard displays risk and trends. SHAP and attention weights provide feature-level and time-step-level explanations.
 
-The next evaluation steps should include calibration, threshold analysis, measurement of warning lead time, comparison with NEWS2, subgroup analysis, and prospective validation.
+## Slide 8: Expected Outcome
 
-## Slide 8: Conclusion
+The expected outcome is a working real-time ICU dashboard that displays patient deterioration risk from recent clinical measurements.
 
-To conclude, SynCura demonstrates an end-to-end workflow for ICU deterioration-risk monitoring.
+The system should provide a 0-to-100 risk score, explanations for the score, and a workflow for viewing patient trends.
 
-The system connects clinical time-series data, an attention-based LSTM, a FastAPI inference backend, a React dashboard, and explainability methods.
+For evaluation, we target an AUC-ROC in a realistic range for a single-dataset vitals-plus-labs system. We also aim to investigate earlier warning compared with a NEWS2 baseline, but this must be measured properly rather than assumed.
 
-Temporal attention helps identify which recent time steps contributed to the prediction, while SHAP helps identify which features influenced the risk score.
+The final objective is to demonstrate a feasible and explainable research prototype, not to claim clinical deployment readiness.
 
-The current experiment achieved 0.807 validation AUC and 0.765 set-B holdout AUC. These results support the prototype concept, but more validation is necessary before the system can be considered for actual clinical use.
+## Slide 9: Technology / Tools Required
 
-## Slide 9: Future Scope
+Python is used for the machine-learning pipeline and backend services. JavaScript is used for the frontend.
 
-The first area of future work is evaluation. We need calibration studies, decision-curve analysis, prospective testing, and comparison with established clinical scores.
+The main frameworks and tools are PyTorch, FastAPI, React, Vite, Tailwind CSS, SQLite, scikit-learn, and SHAP.
 
-The second area is robustness. The system should be tested across hospitals, patient subgroups, different missing-data patterns, and changing sensor quality.
+The main dataset is the PhysioNet 2012 Challenge dataset. REST APIs support ingestion and inference. An ESP32 with a MAX30105 sensor is an optional hardware extension for future live-vital capture.
 
-The third area is model improvement. Transformer-based and graph-based temporal models can be compared with the current attention-LSTM approach.
+## Slide 10: SDG Relevance
 
-The system can also be extended to multimodal data, including clinical notes, and eventually explore privacy-preserving or edge-assisted deployment. These extensions should only be pursued alongside appropriate clinical and safety validation.
+SynCura is related to SDG 3, Good Health and Well-Being. Earlier identification of ICU deterioration may support timely clinical review and better patient monitoring.
 
-## Slide 10: Technology and SDG Relevance
-
-The machine-learning and backend components use Python, PyTorch, FastAPI, SQLite, scikit-learn, and SHAP.
-
-The frontend is built with React, Vite, and Tailwind CSS. PhysioNet 2012 is used as the research dataset.
-
-The project relates to SDG 3, Good Health and Well-Being, because earlier identification of deterioration may support better patient monitoring.
-
-It also relates to SDG 9, Industry, Innovation and Infrastructure, because it applies explainable artificial intelligence to a modern clinical monitoring workflow.
+It is also related to SDG 9, Industry, Innovation and Infrastructure. The project applies explainable deep learning to a modern clinical monitoring workflow that combines machine learning, APIs, visualization, and sensor-ready architecture.
 
 ## Slide 11: References
 
-This slide lists the main papers and dataset reference used in our work.
+This slide lists the base paper and the main supporting studies used in our work.
 
-The Wang, Bai, and Jin paper is the main architectural reference for the explainable LSTM direction. The other papers support our choices related to attention, ICU risk prediction, missing-data handling, wearable monitoring, graph models, and clinical early-warning systems.
+The references cover explainable LSTM models, attention-based ICU prediction, vital-sign modeling, multimodal learning, missing-data recovery, graph attention, wearable monitoring, and the PhysioNet dataset.
 
-The PhysioNet 2012 Challenge is the source of the clinical time-series data used for training and evaluation.
+The complete literature survey is available in the accompanying literature review document. Before formal submission, we should verify the final DOI and bibliographic details against the publisher records.
 
 ## Slide 12: Thank You
 
 Thank you for listening to our presentation.
 
-SynCura is intended as an explainable research prototype for early ICU risk monitoring. We welcome your questions and suggestions.
+SynCura is an explainable research prototype for early ICU deterioration-risk monitoring. We welcome your questions and suggestions.
 
 ## Common Questions and Answers
 
 ### Why did you choose an LSTM?
 
-An LSTM is designed for sequential data and can learn relationships across time. ICU measurements are time-series data, so an LSTM is a suitable baseline. We added attention to identify the time steps that influenced the prediction.
+An LSTM is designed for sequential data and can learn relationships across time. ICU measurements are time-series data, so an LSTM is an appropriate and understandable baseline.
 
-### Why is explainability important here?
+### Why did you add attention?
 
-Healthcare users need more than a risk number. Attention weights can show important time steps, and SHAP can show important features. These explanations can support analysis and user trust, although they should not be treated as proof of causation.
+Attention helps the model assign importance to different time steps. This provides a temporal explanation of which parts of the recent patient trajectory influenced the risk estimate.
 
-### Why is the holdout AUC lower than the validation AUC?
+### Is this system clinically deployable?
 
-The validation data is used during model development, while set-B is unseen holdout data. A lower holdout score can reveal distribution differences and possible overfitting. This is why external validation is important.
-
-### Is this system clinically deployable now?
-
-No. It is a research prototype. It requires calibration, clinical review, prospective testing, safety analysis, privacy controls, and external validation before any clinical deployment.
+No. It is a research prototype. It would require calibration, clinical review, prospective testing, external validation, privacy controls, safety analysis, and regulatory consideration before deployment.
 
 ### Why use PhysioNet 2012?
 
-It is a public and established ICU time-series dataset with mortality outcomes. It allows reproducible experimentation, although it is older and does not represent every modern hospital or patient population.
+It is a public and established ICU time-series dataset that supports reproducible experimentation. Its age and limited representation of modern hospitals are acknowledged limitations.
+
+### What is the novelty of SynCura?
+
+The novelty is the integration of temporal attention, real-time API serving, dashboard visualization, and dual explainability in one practical prototype. It is an engineering and integration contribution, not a claim that the LSTM architecture itself is new.
 
 ### What is the main limitation?
 
-The main limitations are the use of a single public dataset, irregular and missing measurements, limited external validation, and the absence of prospective clinical testing.
+The main limitations are the single public dataset, missing and irregular measurements, limited external validation, and the absence of prospective clinical testing.
