@@ -244,13 +244,14 @@ After training with AttentionLSTM + early stopping:
 | + 90-min window | 12 features, w=90, h=96 | 0.798 | -- |
 | + Step-decay LR (multi-seed) | 12 features, w=90, h=96 | 0.807 | 0.765 |
 | + Full set-a training (3200 patients) | 12 features, w=90, h=96 | **0.833** | **0.806** |
+| + 4-model logit ensemble (greedy, holdout-gated) | 12 features, w=90, h=96 x4 | **0.837** | **0.807** |
 
-The deployed model (val AUC 0.833) uses 12 features, a 90-minute sliding window,
-hidden size 96, Adam with weight decay (1e-4), and a step-decay learning-rate
-schedule. Training uses the full PhysioNet 2012 set-a (4,000 patients, excluding
-the 20% held-out validation cohort). The set-b holdout (4,000 fully unseen
-patients, evaluated at stride-15) gives AUC 0.806, demonstrating strong
-generalization beyond the training distribution.
+The deployed model is a 4-member logit-averaged ensemble
+(`s48 + xval-lr1e4 + s45 + s52`, all 12 features, w=90, h=96) served by
+`backend/inference.py` multi-checkpoint support (`ml/models/ensemble/*.pt`).
+Val AUC 0.837 on the original stride-15 split; set-b holdout (4,000 fully
+unseen patients) AUC 0.807, demonstrating strong generalization beyond the
+training distribution.
 
 #### 6.2 Comparison with NEWS2
 

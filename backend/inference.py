@@ -32,6 +32,7 @@ class RiskScoreEngine:
         self.model_path = model_path
         self.window_size = window_size
         self.model = None
+        self.models = []  # ensemble members (logit-averaged); empty => use self.model
         self.vital_buffer = {}  # per patient: deque of recent vitals
         self.risk_scores = {}   # per patient: latest risk score
         self.lock = threading.Lock()
@@ -56,7 +57,29 @@ class RiskScoreEngine:
                 print(f'[Inference] Warning: failed to load scaler: {e}')
 
     def _load_model(self):
-        """Load the trained AttentionLSTM model."""
+        """Load the trained AttentionLSTM model (or ensemble directory)."""
+        # Ensemble: if ml/models/ensemble/*.pt exists, load all members and
+        # average logits at inference. Single-file fallback otherwise.
+        ens_dir = os.path.join(os.path.dirname(self.model_path), 'ensemble')
+        ens_paths = sorted(glob.glob(os.path.join(ens_dir, '*.pt'))) if os.path.isdir(ens_dir) else []
+        if ens_paths:
+            try:
+                from ml.train_lstm import AttentionLSTMModel
+                for p in ens_paths:
+                    m = AttentionLSTMModel(input_size=len(FEATURES), hidden_size=96)
+                    try:
+                        state = torch.load(p, map_location='cpu', weights_only=True)
+                    except TypeError:
+                        state = torch.load(p, map_location='cpu')
+                    m.load_state_dict(state)
+                    m.eval()
+                    self.models.append(m)
+                self.model = self.models[0]  # primary (attention weights source)
+                print(f'[Inference] Loaded ensemble of {len(self.models)} models from {ens_dir}')
+                return
+            except Exception as e:
+                print(f'[Inference] Warning: ensemble load failed ({e}); falling back to single model')
+                self.models = []
         if os.path.exists(self.model_path):
             try:
                 from ml.train_lstm import AttentionLSTMModel
@@ -149,7 +172,11 @@ class RiskScoreEngine:
 
             with torch.no_grad():
                 x_tensor = torch.from_numpy(X.reshape(1, -1, X.shape[1]))
-                prob = torch.sigmoid(self.model(x_tensor)).item()
+                if self.models:
+                    logit = float(sum(m(x_tensor).item() for m in self.models) / len(self.models))
+                else:
+                    logit = self.model(x_tensor).item()
+                prob = torch.sigmoid(torch.tensor(logit)).item()
 
             return max(0, min(100, round(prob * 100)))
         except Exception as e:

@@ -1,0 +1,32 @@
+{
+  "config": "full-xval-lr1e4-seed50",
+  "features": [
+    "HR",
+    "RespRate",
+    "Temp",
+    "NISysABP",
+    "NIDiasABP",
+    "SpO2",
+    "GCS",
+    "BUN",
+    "Creatinine",
+    "WBC",
+    "Platelets",
+    "Glucose"
+  ],
+  "window": 90,
+  "hidden_size": 96,
+  "dropout": 0.3,
+  "weight_decay": 0.0001,
+  "lr": 0.0001,
+  "seed": 50,
+  "val_split": "original-1519-subset-stride15-seed42",
+  "best_auc": 0.8320272924073018,
+  "val_auc": 0.8320272924073018,
+  "val_accuracy": 0.7074792623568932,
+  "val_recall": 0.8146701388888888,
+  "holdout_auc": 0.8048138362033185,
+  "holdout_accuracy": 0.7114489395457582,
+  "holdout_recall": 0.7875220070422535,
+  "epochs_trained": 16
+}

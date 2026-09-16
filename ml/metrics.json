@@ -1,5 +1,17 @@
 {
-  "config": "full-xval-lr1e4",
+  "config": "ensemble-s48+xval-lr1e4+s45+s52",
+  "members": [
+    "s48",
+    "xval-lr1e4",
+    "s45",
+    "s52"
+  ],
+  "checkpoints": [
+    "ml/models/ensemble/s48.pt",
+    "ml/models/ensemble/xval-lr1e4.pt",
+    "ml/models/ensemble/s45.pt",
+    "ml/models/ensemble/s52.pt"
+  ],
   "features": [
     "HR",
     "RespRate",
@@ -16,20 +28,12 @@
   ],
   "window": 90,
   "hidden_size": 96,
-  "dropout": 0.3,
-  "weight_decay": 0.0001,
-  "lr": 0.0001,
-  "step_every": 6,
-  "seed": 34,
   "val_split": "original-1519-subset-stride15-seed42",
-  "val_stride": 15,
-  "train_stride": 30,
-  "best_auc": 0.8331587752268266,
-  "val_auc": 0.8331587752268266,
-  "val_accuracy": 0.7050113114416947,
-  "val_recall": 0.7999131944444444,
-  "holdout_auc": 0.8057188155378302,
-  "holdout_accuracy": 0.7164798346693386,
-  "holdout_recall": 0.7873386150234741,
-  "epochs_trained": 16
+  "best_auc": 0.8371,
+  "val_auc": 0.8371,
+  "val_accuracy": 0.7269,
+  "val_recall": 0.8142,
+  "holdout_auc": 0.8073,
+  "holdout_accuracy": 0.7245,
+  "holdout_recall": 0.7785
 }
