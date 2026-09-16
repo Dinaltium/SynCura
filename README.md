@@ -14,7 +14,7 @@ This repository contains a real-time ICU patient deterioration monitoring system
 - **AttentionLSTM Model**: LSTM with temporal attention, dropout, batch normalization, and early stopping
 - **FastAPI Backend**: Real-time inference, SHAP explainability, and REST API
 - **React Frontend**: ICU dashboard with scenario simulation, alerts, and training UI
-- **PhysioNet 2012**: Trained on ICU mortality prediction dataset with 6 vital signs (HR, RespRate, Temp, SysBP, DiasBP, SpO2)
+- **PhysioNet 2012**: Trained on ICU mortality prediction dataset with 12 features (6 vitals: HR, RespRate, Temp, SysBP, DiasBP, SpO2 + 6 labs: GCS, BUN, Creatinine, WBC, Platelets, Glucose)
 
 Status
 ------
@@ -40,11 +40,13 @@ python -m ml.train `
   --lr 0.0003
 ```
 
-This uses the full set-a (~1,500 patients), 60-minute windows with 15-minute stride, proximity labeling (last 12h of each stay), population normalization, and early stopping. Metrics go to the latest `ml/training_runs/run_*/metrics.json` (copied to `ml/metrics.json`), model to `ml/models/lstm_baseline.pt`, scaler stats to `ml/scaler.json`.
+This uses the full set-a (4,000 patients), 90-minute windows with 30-minute training stride (15-minute eval stride), proximity labeling (last 12h of each stay), population normalization, and early stopping. Metrics go to the latest `ml/training_runs/exp_*/<config>/metrics.json` (copied to `ml/metrics.json`), model to `ml/models/lstm_baseline.pt`, scaler stats to `ml/scaler.json`.
+
+**Deployed model (val AUC 0.837, set-b holdout AUC 0.807):** a 4-member logit-averaged ensemble (`s48 + xval-lr1e4 + s45 + s52`, all 12-feature f12-h96-w90) served from `ml/models/ensemble/*.pt` via multi-checkpoint support in `backend/inference.py`.
 
 For a quick smoke test only (not reportable): add `--max-patients 100 --epochs 2`.
 
-This loads ~100 patients, creates 60-minute sliding windows of vitals (HR, RespRate, Temp, SysBP, DiasBP, SpO2), normalizes, trains an AttentionLSTM with early stopping, and saves metrics to `ml/metrics.json`.
+This loads ~100 patients, creates 90-minute sliding windows of 12 features (6 vitals + 6 labs), normalizes, trains an AttentionLSTM with early stopping, and saves metrics to `ml/metrics.json`.
 
 Running the Full Data Pipeline
 -------------------------------
@@ -58,7 +60,7 @@ uvicorn backend.app:app --reload --port 8000
 
 The backend will:
 - Initialize SQLite database at `backend/data/vitals.db`
-- Load the trained LSTM model from `ml/models/lstm_baseline.pt`
+- Load the trained 4-model AttentionLSTM ensemble from `ml/models/ensemble/*.pt` (falls back to `ml/models/lstm_baseline.pt` if no ensemble dir)
 - Start listening on `http://localhost:8000`
 
 Available endpoints:

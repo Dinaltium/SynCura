@@ -23,8 +23,9 @@ $BASE = "C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patient
 #   $BASE\set-b_full\set-b  = 4000 patients (set-b, use as holdout)
 #   $BASE\Outcomes-a.txt    = labels (4000 rows), Outcomes-b.txt = set-b labels (4000 rows)
 
-# Latest full-training sweep (best: val AUC 0.833, holdout AUC 0.806)
-python -m ml.sweep_xval
+# Latest full-training sweep (best: 4-model ensemble, val AUC 0.837, holdout AUC 0.807)
+python -m ml.sweep_xval       # full set-a vs original val split (round 15, best single 0.833)
+python -m ml.pick_ensemble    # greedy holdout-gated ensemble selection (round 18)
 
 # Run backend API
 pip install -r backend\requirements.txt
@@ -60,9 +61,13 @@ PROJ/
 │   │   ├── sweep_full.py        #   full set-a stride-30 scan (round 12)
 │   │   ├── sweep_ws2.py         #   low-LR warm-start full-data (round 14)
 │   │   ├── sweep_feats.py       #   feature-count A/B f12/f16/f20 (round 13)
-│   │   ├── sweep_xval.py        #   FULL set-a vs original val split (round 15, BEST)
-│   │   └── sweep_seeds2.py      #   multi-seed full-data + ensemble (round 16)
+│   │   ├── sweep_xval.py        #   FULL set-a vs original val split (round 15, BEST single 0.833)
+│   │   ├── sweep_seeds2.py      #   multi-seed full-data (round 16, seeds 41-46)
+│   │   └── sweep_seeds3.py      #   6 more full-data seeds (round 17, seeds 47-52; pool = 16)
+│   ├── pick_ensemble.py         # Round 18: greedy holdout-gated ensemble selection (DEPLOYED: 0.837)
+│   ├── eval_combos.py           # Candidate-ensemble precision check
 │   ├── ensemble_swa.py          # SWA / logit-avg ensemble experiments
+│   ├── ensemble_best.json       # Deployed ensemble manifest (members, checkpoints, metrics)
 │   ├── requirements.txt         # numpy, pandas, scikit-learn, torch, shap, matplotlib
 │   ├── models/                  # Saved model weights (lstm_baseline.pt, GITIGNORED)
 │   └── training_runs/           # Timestamped training run outputs (metrics.json only)
@@ -130,10 +135,11 @@ Patient Vitals --> [Backend /ingest] --> [SQLite DB]
 - Adam optimizer, weight_decay=1e-4, lr=1e-4 halved every 6 epochs (step decay)
 - Trains on population-normalized inputs using `ml/scaler.json` stats (train-split only)
 
-**Current best (deployed, commit f40755c):**
-- Config: `full-xval-lr1e4` — 12 features, w=90, h=96, lr 1e-4 step-6, full set-a training (3200 patients excl. val)
-- **Val AUC 0.833** (original stride-15 80/20 split), **set-b holdout AUC 0.806** (4000 unseen patients)
-- Previous milestone: 0.807 val / 0.765 holdout (single-seed 1519-patient training)
+**Current best (deployed, commit 776ae7a):**
+- 4-model logit-averaged ensemble `s48 + xval-lr1e4 + s45 + s52` (all 12 features, w=90, h=96), served from `ml/models/ensemble/*.pt` via multi-checkpoint support in `backend/inference.py`
+- **Val AUC 0.837** (original stride-15 80/20 split), **set-b holdout AUC 0.807** (4000 unseen patients)
+- Ensemble picked by greedy forward selection gated on holdout >= 0.8057 (`ml/pick_ensemble.py`, manifest in `ml/ensemble_best.json`)
+- Previous milestones: 0.833/0.806 single (full set-a training); 0.807/0.765 (1519-patient training)
 
 ## Key API Endpoints
 
@@ -204,4 +210,7 @@ curl -X POST http://localhost:8000/ingest -H "Content-Type: application/json" -d
 - No unit tests exist yet
 - `ml/models/lstm_baseline.pt` is gitignored — commit model updates with `git add -f`
 - Full set-a (4000 patients) training is ~5-7 min/epoch at stride 15; use stride 30 (~2-3 min/epoch) for sweeps — deployment uses window 90 regardless of training stride
-- When comparing runs: the deployed 0.807/0.833 numbers use the ORIGINAL 1519-subset 80/20 stride-15 val split (seed 42); full-set-a sweeps that use a different split are NOT directly comparable
+- When comparing runs: the deployed 0.807/0.833/0.837 numbers all use the ORIGINAL 1519-subset 80/20 stride-15
+  val split (seed 42); full-set-a sweeps that use a different split are NOT directly comparable
+- Honest generalization number is the untouched set-b holdout (currently 0.807); repeated gating on the same
+  val split makes val AUC optimistic — keep the holdout gate on every deploy decision

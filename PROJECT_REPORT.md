@@ -160,10 +160,12 @@ Key design choices:
 
 #### 4.5 Training Strategy
 
-- **Optimizer**: Adam (lr=1e-3)
-- **Loss**: Weighted Binary Cross-Entropy with pos_weight
-- **Early Stopping**: Patience=5 epochs on validation AUC
-- **Min Delta**: 0.001 AUC improvement required
+- **Optimizer**: Adam (lr=1e-4, weight_decay=1e-4), step-decay LR halved every 6 epochs
+- **Loss**: Weighted Binary Cross-Entropy with pos_weight (neg/pos ratio)
+- **Early Stopping**: Patience=14 epochs on validation AUC
+- **Min Delta**: 0.0005 AUC improvement required
+- **Data**: Full PhysioNet set-a (4,000 patients, stride-30 windows) minus the 20% validation cohort; evaluated on the original stride-15 split + set-b holdout
+- **Deployment**: 4-model logit-averaged ensemble (greedy forward selection gated on holdout AUC)
 
 ---
 
@@ -383,10 +385,15 @@ PROJ/
 │   ├── dataset.py             # PhysioNet data loader
 │   ├── preprocess.py          # Normalization pipeline
 │   ├── explain.py             # SHAP explainability
-│   └── models/                # Saved weights
+│   ├── sweep_*.py             # Experiment sweeps (rounds 8-17)
+│   ├── pick_ensemble.py       # Greedy holdout-gated ensemble selection
+│   ├── ensemble_best.json     # Deployed ensemble manifest
+│   ├── metrics.json           # Deployed metrics (val AUC 0.837, holdout 0.807)
+│   ├── scaler.json            # Population normalization stats (12 features)
+│   └── models/                # lstm_baseline.pt + ensemble/*.pt (4 members)
 ├── backend/
 │   ├── app.py                 # FastAPI endpoints
-│   ├── inference.py           # RiskScoreEngine
+│   ├── inference.py           # RiskScoreEngine (single + ensemble inference)
 │   ├── training.py            # Training job manager
 │   └── db.py                  # SQLite database
 ├── frontend/
@@ -429,12 +436,13 @@ POST /ingest
 ```json
 GET /metrics
 {
-  "auc": 0.856,
-  "accuracy": 0.891,
-  "precision": 0.782,
-  "recall": 0.714,
-  "best_auc": 0.862,
-  "epochs_trained": 12
+  "config": "ensemble-s48+xval-lr1e4+s45+s52",
+  "val_auc": 0.8371,
+  "val_accuracy": 0.7269,
+  "val_recall": 0.8142,
+  "holdout_auc": 0.8073,
+  "holdout_accuracy": 0.7245,
+  "holdout_recall": 0.7785
 }
 ```
 
