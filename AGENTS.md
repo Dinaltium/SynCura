@@ -16,6 +16,16 @@ python ml/train.py `
   --outcomes "C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0\Outcomes-a.txt" `
   --epochs 20 --max-patients 100 --patience 5
 
+# Data directories
+$BASE = "C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0"
+#   $BASE\set-a              = 1519 patients (fast, legacy subset)
+#   $BASE\set-a_full\set-a  = 4000 patients (FULL set-a, use for training)
+#   $BASE\set-b_full\set-b  = 4000 patients (set-b, use as holdout)
+#   $BASE\Outcomes-a.txt    = labels (4000 rows), Outcomes-b.txt = set-b labels (4000 rows)
+
+# Latest full-training sweep (best: val AUC 0.833, holdout AUC 0.806)
+python -m ml.sweep_xval
+
 # Run backend API
 pip install -r backend\requirements.txt
 uvicorn backend.app:app --reload --port 8000
@@ -41,9 +51,21 @@ PROJ/
 │   ├── explain.py               # SHAP-based feature importance (KernelSHAP)
 │   ├── eval_shap.py             # (Legacy) SHAP evaluation stub
 │   ├── bench_batch.py           # Batch benchmarking
+│   ├── run_experiments.py       # Automated multi-config sweeps
+│   ├── sweep_*.py               # One-off experiment sweeps:
+│   │   ├── sweep_tight.py       #   LR scheduling / warm-start (round 8)
+│   │   ├── sweep_finetune.py    #   warm-start fine-tune (round 9)
+│   │   ├── sweep_last.py        #   step-decay cadence (round 10)
+│   │   ├── sweep_seed.py        #   multi-seed winner (round 11)
+│   │   ├── sweep_full.py        #   full set-a stride-30 scan (round 12)
+│   │   ├── sweep_ws2.py         #   low-LR warm-start full-data (round 14)
+│   │   ├── sweep_feats.py       #   feature-count A/B f12/f16/f20 (round 13)
+│   │   ├── sweep_xval.py        #   FULL set-a vs original val split (round 15, BEST)
+│   │   └── sweep_seeds2.py      #   multi-seed full-data + ensemble (round 16)
+│   ├── ensemble_swa.py          # SWA / logit-avg ensemble experiments
 │   ├── requirements.txt         # numpy, pandas, scikit-learn, torch, shap, matplotlib
-│   ├── models/                  # Saved model weights (lstm_baseline.pt)
-│   └── training_runs/           # Timestamped training run outputs
+│   ├── models/                  # Saved model weights (lstm_baseline.pt, GITIGNORED)
+│   └── training_runs/           # Timestamped training run outputs (metrics.json only)
 │
 ├── backend/                     # FastAPI REST API
 │   ├── app.py                   # Main API: /health, /ingest, /patients, /scores, /metrics, /explain
@@ -101,11 +123,17 @@ Patient Vitals --> [Backend /ingest] --> [SQLite DB]
 
 **AttentionLSTMModel** (defined in `ml/train_lstm.py`):
 
-- Input: 6 features x 60 timesteps (HR, RespRate, Temp, SysBP, DiasBP, SpO2)
-- 2-layer LSTM (hidden_size=64, dropout=0.3)
-- Additive attention over all time steps (interpretable)
+- Input: 12 features x 90 timesteps (window = 90 min, stride 30 at training)
+- 2-layer LSTM (hidden_size=96, dropout=0.3), additively attends over time steps
 - Batch normalization + dropout
-- Sigmoid output for binary mortality prediction
+- Sigmoid output for binary mortality prediction (trained with BCEWithLogitsLoss, pos_weight = neg/pos)
+- Adam optimizer, weight_decay=1e-4, lr=1e-4 halved every 6 epochs (step decay)
+- Trains on population-normalized inputs using `ml/scaler.json` stats (train-split only)
+
+**Current best (deployed, commit f40755c):**
+- Config: `full-xval-lr1e4` — 12 features, w=90, h=96, lr 1e-4 step-6, full set-a training (3200 patients excl. val)
+- **Val AUC 0.833** (original stride-15 80/20 split), **set-b holdout AUC 0.806** (4000 unseen patients)
+- Previous milestone: 0.807 val / 0.765 holdout (single-seed 1519-patient training)
 
 ## Key API Endpoints
 
@@ -124,7 +152,7 @@ Patient Vitals --> [Backend /ingest] --> [SQLite DB]
 
 ## Feature Set
 
-The model uses 6 features (must match between training and inference):
+The model uses **12 features** (must match between training and inference — see `ml/scaler.json` and `backend/inference.py`):
 
 | Feature | PhysioNet Name | Normal Range |
 |---------|---------------|--------------|
@@ -134,6 +162,17 @@ The model uses 6 features (must match between training and inference):
 | Systolic BP | NISysABP | 90-140 mmHg |
 | Diastolic BP | NIDiasABP | 60-90 mmHg |
 | SpO2 | SpO2 | 95-100% |
+| GCS | GCS | 3-15 |
+| BUN | BUN | 6-24 mg/dL |
+| Creatinine | Creatinine | 0.6-1.2 mg/dL |
+| WBC | WBC | 4.5-11 x10^3/uL |
+| Platelets | Platelets | 150-450 x10^3/uL |
+| Glucose | Glucose | 70-140 mg/dL |
+
+Notes:
+- PhysioNet 2012 has **no SpO2 column** — `ml/dataset.py` `PARAMETER_ALIASES` maps SpO2 -> SaO2.
+- NaN handling: NaNs are filled with the population mean (from `ml/scaler.json`) before normalization.
+- A 20-feature variant (adds K, Na, HCO3, Mg, HCT, pH, PaO2, PaCO2) was tested but scored **worse** (0.787 vs 0.807) — stick with 12 features.
 
 ## Code Conventions
 
@@ -163,3 +202,6 @@ curl -X POST http://localhost:8000/ingest -H "Content-Type: application/json" -d
 - Model stats in frontend WelcomePage may still be hardcoded (check before modifying)
 - `chart.js` and `socket.io-client` are in package.json but unused
 - No unit tests exist yet
+- `ml/models/lstm_baseline.pt` is gitignored — commit model updates with `git add -f`
+- Full set-a (4000 patients) training is ~5-7 min/epoch at stride 15; use stride 30 (~2-3 min/epoch) for sweeps — deployment uses window 90 regardless of training stride
+- When comparing runs: the deployed 0.807/0.833 numbers use the ORIGINAL 1519-subset 80/20 stride-15 val split (seed 42); full-set-a sweeps that use a different split are NOT directly comparable
