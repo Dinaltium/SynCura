@@ -1,0 +1,10 @@
+{
+  "members": [
+    "old:s48",
+    "new:c93",
+    "old:s45"
+  ],
+  "val_auc": 0.8397013473341656,
+  "fresh_holdout_auc": 0.8442562732717304,
+  "note": "mixed old+combo; per-member scalers (old=ml/scaler.json, new=ml/scaler_combo8k.json)"
+}

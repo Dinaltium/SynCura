@@ -1,20 +1,37 @@
 {
   "members": [
     "s48",
-    "xval-lr1e4",
-    "s45",
-    "s52"
+    "c93",
+    "s45"
   ],
   "checkpoints": [
     "ml/models/ensemble/s48.pt",
-    "ml/models/ensemble/xval-lr1e4.pt",
-    "ml/models/ensemble/s45.pt",
-    "ml/models/ensemble/s52.pt"
+    "ml/models/ensemble/c93.pt",
+    "ml/models/ensemble/s45.pt"
   ],
-  "val_auc": 0.8371,
-  "val_accuracy": 0.720504558853774,
-  "val_recall": 0.8125,
-  "holdout_auc": 0.8073,
-  "holdout_accuracy": 0.7217925434201736,
-  "holdout_recall": 0.7775454812206573
+  "arch": [
+    {
+      "bidirectional": false,
+      "hidden_size": 96
+    },
+    {
+      "bidirectional": false,
+      "hidden_size": 96
+    },
+    {
+      "bidirectional": false,
+      "hidden_size": 96
+    },
+    {
+      "bidirectional": false,
+      "hidden_size": 96
+    }
+  ],
+  "val_auc": 0.8401,
+  "val_accuracy": 0.7407965997120723,
+  "val_recall": 0.8172743055555556,
+  "holdout_auc": null,
+  "holdout_accuracy": 0.7273087842351369,
+  "holdout_recall": 0.7551349765258216,
+  "fresh_holdout_auc": 0.8441
 }

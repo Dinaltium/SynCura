@@ -1,16 +1,14 @@
 {
-  "config": "ensemble-s48+xval-lr1e4+s45+s52",
+  "config": "ensemble-s48+c93+s45",
   "members": [
     "s48",
-    "xval-lr1e4",
-    "s45",
-    "s52"
+    "c93",
+    "s45"
   ],
   "checkpoints": [
     "ml/models/ensemble/s48.pt",
-    "ml/models/ensemble/xval-lr1e4.pt",
-    "ml/models/ensemble/s45.pt",
-    "ml/models/ensemble/s52.pt"
+    "ml/models/ensemble/c93.pt",
+    "ml/models/ensemble/s45.pt"
   ],
   "features": [
     "HR",
@@ -29,11 +27,13 @@
   "window": 90,
   "hidden_size": 96,
   "val_split": "original-1519-subset-stride15-seed42",
-  "best_auc": 0.8371,
-  "val_auc": 0.8371,
-  "val_accuracy": 0.7269,
-  "val_recall": 0.8142,
-  "holdout_auc": 0.8073,
-  "holdout_accuracy": 0.7245,
-  "holdout_recall": 0.7785
+  "best_auc": 0.8401,
+  "val_auc": 0.8401,
+  "val_accuracy": 0.7384,
+  "val_recall": 0.816,
+  "holdout_auc": null,
+  "holdout_note": "full set-b holdout N/A (c93 member trained on 80pct of set-b); see fresh_holdout_auc for the honest unseen-patient number",
+  "fresh_holdout_auc": 0.8441,
+  "fresh_holdout_accuracy": 0.7471,
+  "fresh_holdout_recall": 0.8066
 }

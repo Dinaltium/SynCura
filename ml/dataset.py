@@ -87,7 +87,7 @@ def load_physionet_batch(physionet_dir, outcomes_file=None, max_patients=None):
 
 
 def create_sequences_from_physionet(data_list, vital_features=None, window_minutes=60, stride=1,
-                                    label_mode='all', horizon_hours=12):
+                                    label_mode='all', horizon_hours=12, gap_channels=False):
     """Convert PhysioNet data list into sequences X, y.
 
     No normalization is applied here on purpose: per-patient z-scoring erases
@@ -106,6 +106,11 @@ def create_sequences_from_physionet(data_list, vital_features=None, window_minut
         may occur after the 48h record), but far less noisy than 'all'.
     Remaining NaNs (columns entirely missing for a patient) are left as NaN;
     callers fill them with the training-set mean before normalizing.
+
+    `gap_channels`: when True, append 12 time-since-last-observation channels
+    (minutes since the feature was actually measured, 0 = observed now, capped
+    at `window_minutes`). This preserves the irregular-sampling signal that
+    interpolation/ffill would otherwise erase. Output is (N, window, 2*F).
     """
     if vital_features is None:
         vital_features = ['HR', 'RespRate', 'Temp', 'NISysABP', 'NIDiasABP']
@@ -133,6 +138,8 @@ def create_sequences_from_physionet(data_list, vital_features=None, window_minut
         minute_index = range(int(df_pivot.index.min()), int(df_pivot.index.max()) + 1)
         df_vitals = pd.DataFrame({f: resolved[f] for f in available}, index=df_pivot.index)
         df_vitals = df_vitals.reindex(index=minute_index, columns=vital_features)
+        if gap_channels:
+            observed = df_vitals.notna().values.astype(np.float32)
         df_vitals = df_vitals.interpolate(method='linear', limit_direction='both')
         df_vitals = df_vitals.ffill().bfill()
 
@@ -150,6 +157,18 @@ def create_sequences_from_physionet(data_list, vital_features=None, window_minut
 
         for i in starts:
             window = df_vitals.iloc[i - seq_len:i].values
+            if gap_channels:
+                obs_win = observed[i - seq_len:i]
+                gaps = np.zeros_like(obs_win, dtype=np.float32)
+                for c in range(obs_win.shape[1]):
+                    g = 0.0
+                    for t in range(obs_win.shape[0]):
+                        if obs_win[t, c] > 0.5:
+                            g = 0.0
+                        else:
+                            g = min(g + 1.0, float(seq_len))
+                        gaps[t, c] = g
+                window = np.concatenate([window, gaps], axis=1)
             X_all.append(window)
             y_all.append(label)
             patient_ids.append(patient_id)
@@ -164,11 +183,11 @@ def create_sequences_from_physionet(data_list, vital_features=None, window_minut
 
 
 def load_and_create_sequences(physionet_dir, outcomes_file=None, vital_features=None, window_minutes=60, max_patients=None, stride=1,
-                              label_mode='all', horizon_hours=12):
+                                label_mode='all', horizon_hours=12, gap_channels=False):
     """All-in-one: load PhysioNet directory and create training sequences."""
     data_list = load_physionet_batch(physionet_dir, outcomes_file, max_patients)
     X, y, patient_ids = create_sequences_from_physionet(data_list, vital_features, window_minutes, stride,
-                                                        label_mode, horizon_hours)
+                                                        label_mode, horizon_hours, gap_channels)
     return X, y, patient_ids
 
 

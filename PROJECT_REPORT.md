@@ -247,13 +247,16 @@ After training with AttentionLSTM + early stopping:
 | + Step-decay LR (multi-seed) | 12 features, w=90, h=96 | 0.807 | 0.765 |
 | + Full set-a training (3200 patients) | 12 features, w=90, h=96 | **0.833** | **0.806** |
 | + 4-model logit ensemble (greedy, holdout-gated) | 12 features, w=90, h=96 x4 | **0.837** | **0.807** |
+| + Mixed old+combo ensemble (set-b distribution training) | 12 features, w=90, h=96 x3 | **0.840** | **0.844** (fresh unseen 20% set-b) |
 
-The deployed model is a 4-member logit-averaged ensemble
-(`s48 + xval-lr1e4 + s45 + s52`, all 12 features, w=90, h=96) served by
+The deployed model is a 3-member logit-averaged ensemble
+(`s48 + c93 + s45`, all 12 features, w=90, h=96) served by
 `backend/inference.py` multi-checkpoint support (`ml/models/ensemble/*.pt`).
-Val AUC 0.837 on the original stride-15 split; set-b holdout (4,000 fully
-unseen patients) AUC 0.807, demonstrating strong generalization beyond the
-training distribution.
+Val AUC 0.840 on the original stride-15 split. `c93` was trained on combined
+set-a + 80% of set-b (~7000 patients); the honest external number is the fresh
+holdout of fully unseen set-b patients: AUC 0.844. Bidirectional, 20-feature,
+time-gap-channel, and 24h-horizon variants were all tested and did not beat
+the ensemble (details in `ml/training_runs/`).
 
 #### 6.2 Comparison with NEWS2
 

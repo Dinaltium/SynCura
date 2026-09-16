@@ -1,0 +1,28 @@
+{
+  "config": "combo8k-lr1e4-seed93",
+  "features": [
+    "HR",
+    "RespRate",
+    "Temp",
+    "NISysABP",
+    "NIDiasABP",
+    "SpO2",
+    "GCS",
+    "BUN",
+    "Creatinine",
+    "WBC",
+    "Platelets",
+    "Glucose"
+  ],
+  "window": 90,
+  "train": "set-a_full(excl orig val) + 80pct set-b",
+  "fresh_holdout": "20pct set-b (seed 123)",
+  "best_auc": 0.8349530488163406,
+  "val_auc": 0.8349530488163406,
+  "val_accuracy": 0.7523137039829986,
+  "val_recall": 0.7947048611111112,
+  "fresh_holdout_auc": 0.8420346672194791,
+  "fresh_holdout_accuracy": 0.7588652482269503,
+  "fresh_holdout_recall": 0.7834757834757835,
+  "epochs_trained": 17
+}

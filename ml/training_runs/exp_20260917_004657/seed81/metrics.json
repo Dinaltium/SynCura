@@ -1,0 +1,29 @@
+{
+  "config": "gap24-lr1e4-seed81",
+  "features": [
+    "HR",
+    "RespRate",
+    "Temp",
+    "NISysABP",
+    "NIDiasABP",
+    "SpO2",
+    "GCS",
+    "BUN",
+    "Creatinine",
+    "WBC",
+    "Platelets",
+    "Glucose"
+  ],
+  "gap_channels": true,
+  "n_input": 24,
+  "window": 90,
+  "hidden_size": 96,
+  "best_auc": 0.8287423137896098,
+  "val_auc": 0.8287423137896098,
+  "val_accuracy": 0.7104956468088024,
+  "val_recall": 0.8116319444444444,
+  "holdout_auc": 0.8061590148533895,
+  "holdout_accuracy": 0.7121169422177689,
+  "holdout_recall": 0.791556631455399,
+  "epochs_trained": 16
+}

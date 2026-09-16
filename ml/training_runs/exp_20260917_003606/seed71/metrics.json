@@ -1,0 +1,26 @@
+{
+  "config": "h24-lr1e4-seed71",
+  "horizon_hours": 24,
+  "features": [
+    "HR",
+    "RespRate",
+    "Temp",
+    "NISysABP",
+    "NIDiasABP",
+    "SpO2",
+    "GCS",
+    "BUN",
+    "Creatinine",
+    "WBC",
+    "Platelets",
+    "Glucose"
+  ],
+  "best_auc": 0.8208915960271989,
+  "val_auc": 0.8208915960271989,
+  "val_accuracy": 0.7168308674607806,
+  "val_recall": 0.8122829861111112,
+  "holdout_auc": 0.798742007119881,
+  "holdout_accuracy": 0.7135651511356046,
+  "holdout_recall": 0.7718603286384976,
+  "epochs_trained": 16
+}
