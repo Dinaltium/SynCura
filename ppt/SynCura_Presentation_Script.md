@@ -46,15 +46,15 @@ From this review, we identify a practical gap: many studies focus on model perfo
 
 ## Slide 5: Base Paper / Reference Paper
 
-Our base paper is titled **Explainable Deep-Learning Models to Predict Diaphragmatic Dysfunction and Cognitive Stress in ICU Patients Under Mechanical Ventilation**.
+Our base paper is titled **Development and Validation of a Dynamic Real-Time Risk Prediction Model for ICU Patients Based on Longitudinal Irregular Data: Multicenter Retrospective Study**.
 
-The authors are Wang, Bai, and Jin. It was published in 2026 in *Frontiers in Physiology*, volume 17, article 1765898.
+The authors are Zheng, Luo, Zhu, Du, Lan, Zhou, Yang, and Huang. It was published in 2025 in the *Journal of Medical Internet Research*, volume 27, article e69293.
 
-The study uses data from 25,751 mechanically ventilated ICU patients and compares LSTM, GRU, and RNN models using continuous physiological and ventilator time-series.
+The study uses 176,344 ICU stays from MIMIC-IV and eICU-CRD. It models irregular longitudinal electronic medical record data, including vital signs, laboratory values, and medications, with hourly risk updates.
 
-The main findings are that LSTM performs consistently well, with reported AUC values approximately between 0.79 and 0.87 across outcomes. The paper also emphasizes explainability for clinical trust.
+The proposed time-aware bidirectional attention LSTM, or TBAL, achieves a dynamic AUROC of 0.936 on MIMIC-IV and 0.919 on the external eICU data, with reported recall of 79.1%.
 
-An important limitation is that time-series signals are not equally strong for every clinical outcome. SynCura adapts the LSTM idea to PhysioNet 2012, adds temporal attention, and implements real-time inference and dashboard visualization.
+SynCura adapts this attention-LSTM direction to PhysioNet 2012 using a focused 12-feature, 90-minute window. We also add SHAP feature-level explanations alongside temporal attention weights.
 
 ## Slide 6: Proposed Solution
 
