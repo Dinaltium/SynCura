@@ -18,22 +18,23 @@ Attention-LSTM that reads 12 vitals/labs over 90 minutes and gives a real-time 0
 - **Holdout:** fresh unseen 20% of set-b, ~800 patients → 0.844
 - s45/s48/c93 are just member IDs (training seeds) — same architecture, different data/seed
 
-## Slide → line (15 slides)
+## Slide → line (16 slides)
 1. Title: SynCura — Predictive ICU Monitoring System (Attention-LSTM + real-time explainability)
 2. Problem: NEWS2/SOFA are threshold rules; they miss trends/direction/rate of change
 3. Motivation: deterioration is a process; early + explainable = more review time
-4. Existing work: all models/vitals papers below — few go past AUC, none shipped a real-time path
-5. Base paper: Zheng 2025 TBAL — 0.936/0.919, hourly, 176K stays; RETROSPECTIVE till-discharge (peaks 98.9 at discharge = hindsight); we mirror architecture, restrict to 90-min only + add SHAP
-6. Proposed: rolling 90-min window → risk → temporal-attention + SHAP explanation → dashboard → misses/false alarms queue into weighted retraining
-7. Methodology: PhysioNet 2012 → interpolate → z-score (train-only) → LSTM+attention → FastAPI
-8. Expected outcome: live dashboard, 0–100 score, explanations, NEWS2 comparison, AUC 0.78–0.93 target
-9. Result: 0.840 / **0.844**, plus false alarms, lead time, NEWS2 benchmark
-10. Paper vs real world: paper 0.936 / 98.9 at discharge (hindsight) -> 0.81/0.76 cross-hospital, no prospective test; SynCura = 90-min only, holdout 0.844, false alarms + lead time vs NEWS2
-11. Tech: PyTorch, FastAPI, React/Vite/Tailwind, SQLite, SHAP, PhysioNet 2012
+4. Existing work: BASE Zheng 2025 on top, 8 supporting below (2017/2023 dropped deliberately)
+5. Base paper: Zheng 2025 TBAL — 0.936/0.919, hourly, 176K stays; RETROSPECTIVE till-discharge (peaks 0.989 = hindsight); we mirror architecture, restrict to 90-min only + add SHAP
+6. Proposed: rolling 90-min window → risk → temporal-attention + SHAP explanation → dashboard → misses/false alarms queue into weighted retraining (design goal)
+7. Methodology: 5-box flow (DATA → PREPARE → WINDOW → MODEL → SERVE) + leakage-controls caption
+8. Expected outcome: live dashboard, 0–100 score, explanations, NEWS2 comparison, quantified lead time
+9. Result: 0.840 / **0.844** + REAL ROC + confusion matrix figure (reproduced from deployed checkpoints)
+10. Limitations & improvement path: paper 0.936/0.989 hindsight → 0.81/0.76 cross-hospital; stricter-by-design SynCura; scouted upgrades
+11. Tech: PyTorch, FastAPI, React/Vite/Tailwind, SQLite, SHAP + SENSE→INGEST→SCORE→ACT strip
 12. SDG 3 (health) + SDG 9 (innovation)
-13. Conclusion: end-to-end explainable prototype; needs external validation, not clinical-ready
-14. References
-15. Thank You
+13. Future roadmap: calibration, subgroups, edge/TinyML, prospective pilot, privacy-preserving training
+14. Conclusion: end-to-end explainable prototype; needs external validation, not clinical-ready
+15. References [1]–[10]: Zheng FIRST as base, full titles, then 8 supporting + PhysioNet
+16. Thank You
 
 ## Papers with FULL names (remember these)
 | Ref | Full title | Key number |
@@ -95,13 +96,13 @@ If asked "so what's missing?": name 2–3 and always tie back to Slide 10 upgrad
 - **Q: Why this base?** A: Closest architecture AND task match — attention-LSTM producing real-time interpretable ICU mortality risk from irregular time series, exactly our setup.
 - **Q: What is hour 12?** A: Their fixed static-task trigger: admission→hour-12 data predicts 1/2/4/7-day and in-hospital death. Stays <12h excluded. Dynamic tasks instead predict every hour.
 - **Q: Static vs dynamic?** A: Static = one prediction at hour 12 for fixed windows; dynamic = rolling next-24h prediction every hour till discharge.
-- **Q: What is the discharge/hindsight issue?** A: Retrospective till-discharge data; AUROC climbs to 98.9 at discharge because all info accumulated — hindsight, not early warning. Cross-hospital falls to 0.81/0.76, no prospective test. We ban future info with a 90-min-only window.
+- **Q: What is the discharge/hindsight issue?** A: Retrospective till-discharge data; AUROC climbs to 0.989 at discharge because all info accumulated — hindsight, not early warning. Cross-hospital falls to 0.81/0.76, no prospective test. We ban future info with a 90-min-only window.
 - **Q: How did you adapt it?** A: Same attention-LSTM direction on PhysioNet 2012, 12-feature 90-min window for streaming, plus SHAP feature explanations alongside temporal attention (they use attention + Integrated Gradients).
 
 ### 3. NOVELTY (4 marks)
 - **Q: What is novel if LSTM exists?** A: Integration novelty, not architecture novelty: temporal attention + real-time FastAPI serving + React dashboard + dual explainability (attention for when, SHAP for what) in one prototype.
 - **Q: Papers report AUC — what do you add?** A: False alarms, sensitivity/specificity/precision, lead-time estimate, NEWS2>=7 inline comparison, threshold slider, calibration path — the decision metrics clinicians need.
-- **Q: Proof against overfitting?** A: Fresh unseen 20% set-B holdout 0.844 beats validation 0.840 (full set-b N/A since c93 trained on 80% of set-b). Holdout is the honest number.
+- **Q: Proof against overfitting?** A: Fresh unseen 20% set-B holdout 0.844 at/above validation 0.840 suggests no major overfit — state cautiously, CIs pending. (Full set-b N/A since c93 trained on 80% of set-b.)
 - **Q: Why attention + SHAP both?** A: Attention = which minutes mattered; SHAP = which features mattered. Per-patient inspectable on dashboard.
 - **Q: Why is 90-min window novel vs base?** A: Base uses full stay till discharge; we force early-warning conditions — recent window only, deployable streaming.
 

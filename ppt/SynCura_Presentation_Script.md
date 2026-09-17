@@ -48,7 +48,7 @@ Our base paper is **Development and Validation of a Dynamic Real-Time Risk Predi
 
 It uses 176,344 ICU stays from MIMIC-IV with eICU cross-validation, modeling irregular longitudinal EMR — vitals, labs, medications — with hourly risk updates. Their TBAL model reaches dynamic AUROC 0.936 on MIMIC-IV and 0.919 on eICU, recall 79.1%.
 
-Two details examiners may ask: **hour 12** is their fixed trigger for static tasks — data from admission to hour 12 predicts death in 1/2/4/7 days and overall in-hospital mortality. And the caveat we state openly: the study is retrospective till discharge, so AUROC rises to 98.9 at discharge because all information has accumulated — hindsight, not early warning — while cross-hospital transfer falls to 0.81 and 0.76 with no prospective test.
+Two details examiners may ask: **hour 12** is their fixed trigger for static tasks — data from admission to hour 12 predicts death in 1/2/4/7 days and overall in-hospital mortality. And the caveat we state openly: the study is retrospective till discharge, so AUROC rises to 0.989 at discharge because all information has accumulated — hindsight, not early warning — while cross-hospital transfer falls to 0.81 and 0.76 with no prospective test.
 
 SynCura adapts the attention-LSTM direction to PhysioNet 2012 with a focused 12-feature, 90-minute window using only past data, and adds SHAP feature-level explanations alongside temporal attention.
 
@@ -80,17 +80,19 @@ The goal is a feasible, explainable research prototype — not clinical deployme
 
 ## Slide 9: Experimental Result
 
-Our deployed ensemble achieves 0.840 validation AUC and **0.844 on the fresh unseen 20% set-B holdout**. Holdout beating validation means no overfitting to the validation split — that is our honest number. (Full set-b holdout is N/A because member c93 trained on 80% of set-b.)
+Our deployed ensemble achieves 0.840 validation AUC and **0.844 on the fresh unseen 20% set-B holdout**. Holdout at or above validation suggests no major overfitting — confidence intervals and repeated runs are still pending, so we state it cautiously. (Full set-b holdout is N/A because member c93 trained on 80% of set-b.)
+
+Point at the figure: the ROC curve reproduced from the deployed checkpoints gives val AUC 0.840, and the confusion matrix at threshold 0.5 shows 1,880 caught deaths against 424 missed — recall 0.816. That is the number a clinician cares about.
 
 Beyond AUC we report sensitivity, specificity, precision, false-alarm count, and lead-time estimate, benchmarked against NEWS2.
 
 Remaining before any clinical claim: calibration, threshold analysis, and prospective validation.
 
-## Slide 10: How It Could Be Better with Enough Time
+## Slide 10: Limitations & Improvement Path
 
 This is our paper-versus-real-world slide, and how SynCura becomes a better paper.
 
-First, paper versus reality: base reports 0.936 overall and 98.9 at discharge — hindsight from full-stay data — falling to 0.81/0.76 cross-hospital with no bedside test.
+First, paper versus reality: base reports 0.936 overall and 0.989 at discharge — hindsight from full-stay data — falling to 0.81/0.76 cross-hospital with no bedside test.
 
 Second, reality is messier: US-only retrospective data, missing and asynchronous vitals, age bias above 65, single-center MIMIC data.
 
@@ -110,7 +112,7 @@ SDG 3, Good Health and Well-Being: earlier deterioration detection supports time
 
 ## Slide 13: Future Scope
 
-Calibration, decision-curve analysis, and prospective evaluation with clinical collaborators. Robust missing-data handling and cross-hospital, cross-subgroup testing. Comparison against transformer and graph-based temporal models. Multimodal fusion with clinical notes and safer bedside-data integration. Privacy-preserving and edge-assisted deployment only after clinical validation.
+Pure forward roadmap, no overlap with slide 10: calibration plus decision-curve analysis for bedside thresholds; subgroup and fairness validation across age, sex, and hospitals; edge and TinyML deployment for wearable live vitals; a prospective clinical pilot with collaborators; and privacy-preserving multi-hospital training.
 
 ## Slide 14: Conclusion
 
@@ -118,7 +120,7 @@ SynCura demonstrates an end-to-end explainable ICU risk-monitoring workflow from
 
 ## Slide 15: References
 
-This slide lists the base paper and supporting studies. Note for the team: the references slide still shows the old numbering including the removed 2017 and 2023 entries — renumber it to match slide 4 before presenting. Verify final DOIs against publisher records.
+Ten entries: Zheng 2025 base paper FIRST as [1], then the 8 supporting studies matching slide 4, plus the PhysioNet 2012 dataset as [10]. Full titles with venues — no truncated citations. Verify final DOIs against publisher records.
 
 ## Slide 16: Thank You
 
@@ -132,7 +134,7 @@ Hour 12 is the base paper's fixed trigger for static tasks: data from admission 
 
 ### Why do paper numbers differ from real-world performance?
 
-Retrospective full-stay data accumulates all information till discharge, so AUROC peaks at 98.9 at discharge — hindsight. Cross-hospital transfer drops to 0.81/0.76, with US-only data, missing values, and age bias. SynCura bans future info with a 90-minute-only window and reports the unseen holdout as the honest number.
+Retrospective full-stay data accumulates all information till discharge, so AUROC peaks at 0.989 at discharge — hindsight. Cross-hospital transfer drops to 0.81/0.76, with US-only data, missing values, and age bias. SynCura bans future info with a 90-minute-only window and reports the unseen holdout as the honest number.
 
 ### Why did you choose an LSTM?
 
