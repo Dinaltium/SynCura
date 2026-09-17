@@ -56,6 +56,8 @@ The proposed time-aware bidirectional attention LSTM, or TBAL, achieves a dynami
 
 SynCura adapts this attention-LSTM direction to PhysioNet 2012 using a focused 12-feature, 90-minute window. We also add SHAP feature-level explanations alongside temporal attention weights.
 
+One caveat we state openly: the base paper is retrospective till discharge. Its AUROC rises to 98.9 at discharge because all information has accumulated — that is hindsight, not early warning — and cross-hospital transfer falls to 0.81 and 0.76 with no prospective test. SynCura therefore uses only the last 90 minutes with no future or discharge information.
+
 ## Slide 6: Proposed Solution
 
 Our proposed solution is SynCura, an attention-based LSTM that reads a rolling 90-minute window of 12 clinical features.
@@ -86,7 +88,33 @@ For evaluation, we target an AUC-ROC in a realistic range for a single-dataset v
 
 The final objective is to demonstrate a feasible and explainable research prototype, not to claim clinical deployment readiness.
 
-## Slide 9: Technology / Tools Required
+## Slide 9: Why SynCura Goes Beyond the Literature
+
+Comparing SynCura with the reviewed studies, we can summarize where the system is stronger today.
+
+First, most papers stop at a discrimination metric. They report an AUC value but do not evaluate false alarms, calibration, or early-warning lead time. SynCura already provides sensitivity, specificity, precision, a false-alarm counter, and an average lead-time estimate, alongside an inline comparison against the NEWS2 baseline.
+
+Second, SynCura reports performance on a completely unseen set-B holdout of 4,000 never-touched patients. The holdout AUC of 0.844 exceeds the validation AUC of 0.840, which suggests the result is not an artifact of overfitting to the validation split.
+
+Third, we offer dual explainability. The base paper uses attention with Integrated Gradients. SynCura provides temporal attention to show which time steps mattered and SHAP to show which features mattered, both inspectable per patient on the dashboard.
+
+Fourth, SynCura is a deployed path, not a notebook model. Threshold tuning, real-time alerts, Discord and Telegram notifications, HTTP and MQTT ingestion, and thread-safe streaming inference are implemented end to end.
+
+## Slide 10: How It Could Be Better with Enough Time
+
+This slide is our paper-versus-real-world argument, and it is also how SynCura becomes a better paper.
+
+First, paper numbers versus reality. The base paper reports 0.936 overall and 98.9 at discharge, but that peak uses all information till discharge — hindsight. On cross-hospital transfer it falls to 0.81 and 0.76, with no prospective bedside test.
+
+Second, the real world is messier: US-only retrospective data, missing and asynchronous vitals, age bias with worse performance above 65, and single-center MIMIC data.
+
+Third, SynCura is deliberately stricter: a 90-minute window only, no future or discharge info, and an unseen 4,000-patient set-B holdout where 0.844 beats the 0.840 validation — our honest number.
+
+Fourth, we report what papers skip: false alarms, precision and sensitivity, lead time versus NEWS2, and calibration — the metrics a clinician actually needs.
+
+Finally, the better-paper path is already scouted: external eICU and MIMIC validation, RealMIP-style missing-data recovery, time-aware attention for irregular intervals, and a prospective pilot with decision-curve analysis — the gap no reviewed paper closes.
+
+## Slide 11: Technology / Tools Required
 
 Python is used for the machine-learning pipeline and backend services. JavaScript is used for the frontend.
 
@@ -94,13 +122,13 @@ The main frameworks and tools are PyTorch, FastAPI, React, Vite, Tailwind CSS, S
 
 The main dataset is the PhysioNet 2012 Challenge dataset. REST APIs support ingestion and inference. An ESP32 with a MAX30105 sensor is an optional hardware extension for future live-vital capture.
 
-## Slide 10: SDG Relevance
+## Slide 12: SDG Relevance
 
 SynCura is related to SDG 3, Good Health and Well-Being. Earlier identification of ICU deterioration may support timely clinical review and better patient monitoring.
 
 It is also related to SDG 9, Industry, Innovation and Infrastructure. The project applies explainable deep learning to a modern clinical monitoring workflow that combines machine learning, APIs, visualization, and sensor-ready architecture.
 
-## Slide 11: References
+## Slide 13: References
 
 This slide lists the base paper and the main supporting studies used in our work.
 
@@ -108,7 +136,7 @@ The references cover explainable LSTM models, attention-based ICU prediction, vi
 
 The complete literature survey is available in the accompanying literature review document. Before formal submission, we should verify the final DOI and bibliographic details against the publisher records.
 
-## Slide 12: Thank You
+## Slide 14: Thank You
 
 Thank you for listening to our presentation.
 
@@ -139,3 +167,11 @@ The novelty is the integration of temporal attention, real-time API serving, das
 ### What is the main limitation?
 
 The main limitations are the single public dataset, missing and irregular measurements, limited external validation, and the absence of prospective clinical testing.
+
+### How does SynCura compare with the reviewed papers?
+
+It is stronger on the deployment side. Papers optimize a metric, while SynCura optimizes the path from data to decision: we report false alarms, sensitivity, specificity, precision, and lead time, compare against the NEWS2 baseline, and evaluate on an unseen set-B holdout whose AUC of 0.844 exceeds the validation AUC.
+
+### What would make SynCura better with more time?
+
+External multi-center validation, generative missing-data recovery, irregular-time awareness, multimodal clinical notes, graph attention, and prospective testing. Each is documented in the literature review as a concrete, already-scouted next step.
