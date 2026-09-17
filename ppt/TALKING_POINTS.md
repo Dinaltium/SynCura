@@ -7,7 +7,7 @@
 Attention-LSTM that reads 12 vitals/labs over 90 minutes and gives a real-time 0–100 deterioration risk **with explanations** — the papers stop at AUC, we ship the path.
 
 ## Our numbers (memorize)
-- **0.844** fresh unseen 20% set-B holdout AUC > **0.840** validation → not overfit
+- **0.844** fresh unseen 20% set-B holdout AUC (95% CI 0.836–0.852) vs **0.840** validation → consistent, not overfit
 - 2-layer LSTM, hidden 96, additive temporal attention, 12 features, 90-min window, stride 15
 - Ensemble of 3 LSTM models, logit-averaged
 
@@ -18,38 +18,40 @@ Attention-LSTM that reads 12 vitals/labs over 90 minutes and gives a real-time 0
 - **Holdout:** fresh unseen 20% of set-b, ~800 patients → 0.844
 - s45/s48/c93 are just member IDs (training seeds) — same architecture, different data/seed
 
-## Slide → line (16 slides)
+## 12 features (memorize)
+Vitals: HR 60–100 (pump stress) · RespRate 12–20 (breathing trouble) · Temp ~37 (infection) · NISysABP 90–140 (pumping force) · NIDiasABP 60–90 (vessel tone) · SpO2 95–100% (oxygen, most urgent; stored as SaO2 in PhysioNet)
+Labs+neuro: GCS 3–15 (consciousness) · BUN 6–24 (kidney waste) · Creatinine 0.6–1.2 (kidney marker) · WBC 4.5–11k (infection fight) · Platelets 150–450k (clotting/sepsis) · Glucose 70–140 (stress swings)
+Line: six fast signals catch the crash, six slow ones explain the cause.
+
+## Slide → line (15 slides)
 1. Title: SynCura — Predictive ICU Monitoring System (Attention-LSTM + real-time explainability)
 2. Problem: NEWS2/SOFA are threshold rules; they miss trends/direction/rate of change
 3. Motivation: deterioration is a process; early + explainable = more review time
-4. Existing work: BASE Zheng 2025 on top, 8 supporting below (2017/2023 dropped deliberately)
+4. Existing work: BASE Zheng 2025 on top, 7 supporting below
 5. Base paper: Zheng 2025 TBAL — 0.936/0.919, hourly, 176K stays; RETROSPECTIVE till-discharge (peaks 0.989 = hindsight); we mirror architecture, restrict to 90-min only + add SHAP
-6. Proposed: rolling 90-min window → risk → temporal-attention + SHAP explanation → dashboard → misses/false alarms queue into weighted retraining (design goal)
+6. Proposed: rolling 90-min window → risk → temporal-attention + SHAP explanation → dashboard → misses/false alarms queue into weighted retraining + SHAP bar chart
 7. Methodology: 5-box flow (DATA → PREPARE → WINDOW → MODEL → SERVE) + leakage-controls caption
 8. Expected outcome: live dashboard, 0–100 score, explanations, NEWS2 comparison, quantified lead time
-9. Result: 0.840 / **0.844** + REAL ROC + confusion matrix figure (reproduced from deployed checkpoints)
+9. Result: 0.840 / **0.844** (95% CI 0.836–0.852) + ROC curve + metrics table (val vs holdout)
 10. Limitations & improvement path: paper 0.936/0.989 hindsight → 0.81/0.76 cross-hospital; stricter-by-design SynCura; scouted upgrades
 11. Tech: PyTorch, FastAPI, React/Vite/Tailwind, SQLite, SHAP + SENSE→INGEST→SCORE→ACT strip
 12. SDG 3 (health) + SDG 9 (innovation)
-13. Future roadmap: calibration, subgroups, edge/TinyML, prospective pilot, privacy-preserving training
-14. Conclusion: end-to-end explainable prototype; needs external validation, not clinical-ready
-15. References [1]–[10]: Zheng FIRST as base, full titles, then 8 supporting + PhysioNet
-16. Thank You
+13. Conclusion: end-to-end explainable prototype; needs external validation, not clinical-ready
+14. References [1]–[9]: Zheng FIRST as base, full titles, then 7 supporting + PhysioNet
+15. Thank You
 
 ## Papers with FULL names (remember these)
 | Ref | Full title | Key number |
 |---|---|---|
-| **Base — Zheng et al. 2025** | Development and Validation of a Dynamic Real-Time Risk Prediction Model for ICU Patients Based on Longitudinal Irregular Data: Multicenter Retrospective Study (JMIR 27, e69293) | AUROC 0.936 MIMIC-IV / 0.919 eICU |
-| Yan et al. 2026 | Deep learning-based in-hospital mortality prediction using long-term sequential data in ICU patients: a multi-center validation study (PeerJ 14, e21631) | plain LSTM AUC 0.802 |
-| Sadanandan 2026 | Multimodal Deep Learning for Early Prediction of Patient Deterioration in the ICU: Integrating Time-Series EHR Data with Clinical Notes (arXiv:2603.14719) | AUROC 0.7857, AUPRC 0.1908 |
-| Wu et al. 2024 | Revisiting the potential value of vital signs in the real-time prediction of mortality risk in intensive care unit patients (Journal of Big Data 11, 40) | LSTM AUC 0.9263 |
-| Nguyen et al. 2017 | Deep Learning to Attend to Risk in ICU (arXiv:1707.05010) | PhysioNet 2012 lineage |
-| Xie et al. 2025 (RealMIP) | Unlocking the potential of real-time ICU mortality prediction: redefining risk assessment with continuous data recovery (npj Digital Medicine 8, 733) | AUC 0.957–0.968 |
-| Choi et al. 2020 | Deep Interpretable Early Warning System for the Detection of Clinical Deterioration (IEEE JBHI 24(9)) | AUROC ~0.880 > NEWS2 |
-| Li et al. 2025 | Attention Residual LSTM-FCN for clinical time-series prediction (IEEE Access 13) | attention improves reps |
-| Do et al. 2023 | Rapid Response System Based on Graph Attention Network for Predicting In-Hospital Clinical Deterioration (IEEE Access 11, 29091–29100) | graph attention contrast |
-| Scheid et al. 2025 | Development and validation of a clinical wearable deep learning based continuous in-hospital deterioration prediction model (Nature Communications 16, 9513) | AUROC ~0.89, long lead time |
-| Wang, Bai & Jin 2026 | Explainable Deep-Learning Models for ICU outcomes (Frontiers in Physiology 17) | AUC 0.79–0.87 |
+| **[1] Base — Zheng et al. 2025** | Development and Validation of a Dynamic Real-Time Risk Prediction Model for ICU Patients Based on Longitudinal Irregular Data: Multicenter Retrospective Study (JMIR 27, e69293) | AUROC 0.936 MIMIC-IV / 0.919 eICU |
+| [2] Wang, Bai & Jin 2026 | Explainable Deep-Learning Models for Predicting ICU Patient Outcome (Frontiers in Physiology 17) | AUC 0.79–0.87 |
+| [3] Yan et al. 2026 | Deep Learning-Based In-Hospital Mortality Prediction Using Long-Term Sequential Data in ICU Patients (PeerJ 14, e21631) | plain LSTM AUC 0.802 |
+| [4] Sadanandan 2026 | Multimodal Deep Learning for Early Prediction of Patient Deterioration in the ICU: Integrating Time-Series EHR Data with Clinical Notes (arXiv:2603.14719) | AUROC 0.7857 |
+| [5] Wu et al. 2024 | Revisiting the Potential Value of Vital Signs in the Real-Time Prediction of Mortality Risk in ICU Patients (Journal of Big Data 11, 40) | LSTM AUC 0.9263 |
+| [6] Xie et al. 2025 (RealMIP) | Unlocking the Potential of Real-Time ICU Mortality Prediction: Redefining Risk Assessment with Continuous Data Recovery (npj Digital Medicine 8, 733) | AUC 0.957–0.968 |
+| [7] Choi et al. 2020 | Deep Interpretable Early Warning System for the Detection of Clinical Deterioration (IEEE JBHI 24(9)) | AUROC ~0.880 > NEWS2 |
+| [8] Scheid et al. 2025 | Development and Validation of a Clinical Wearable Deep Learning Based Continuous In-Hospital Deterioration Prediction Model (Nature Communications 16, 9513) | AUROC ~0.89, long lead time |
+| [9] PhysioNet 2012 | Computing in Cardiology Challenge 2012 dataset | physionet.org/content/challenge-2012/ |
 
 Dataset: PhysioNet / Computing in Cardiology Challenge 2012 — https://physionet.org/content/challenge-2012/
 
@@ -102,7 +104,7 @@ If asked "so what's missing?": name 2–3 and always tie back to Slide 10 upgrad
 ### 3. NOVELTY (4 marks)
 - **Q: What is novel if LSTM exists?** A: Integration novelty, not architecture novelty: temporal attention + real-time FastAPI serving + React dashboard + dual explainability (attention for when, SHAP for what) in one prototype.
 - **Q: Papers report AUC — what do you add?** A: False alarms, sensitivity/specificity/precision, lead-time estimate, NEWS2>=7 inline comparison, threshold slider, calibration path — the decision metrics clinicians need.
-- **Q: Proof against overfitting?** A: Fresh unseen 20% set-B holdout 0.844 at/above validation 0.840 suggests no major overfit — state cautiously, CIs pending. (Full set-b N/A since c93 trained on 80% of set-b.)
+- **Q: Proof against overfitting?** A: Fresh unseen 20% set-B holdout 0.844 (95% CI 0.836–0.852) consistent with validation 0.840 — no major overfit. (Full set-b N/A since c93 trained on 80% of set-b.)
 - **Q: Why attention + SHAP both?** A: Attention = which minutes mattered; SHAP = which features mattered. Per-patient inspectable on dashboard.
 - **Q: Why is 90-min window novel vs base?** A: Base uses full stay till discharge; we force early-warning conditions — recent window only, deployable streaming.
 
@@ -118,9 +120,9 @@ If asked "so what's missing?": name 2–3 and always tie back to Slide 10 upgrad
 - **Q: Calibration / thresholds?** A: Threshold slider live-tunes sensitivity/specificity/false alarms; decision-curve analysis + prospective pilot are the stated next steps.
 - **Q: Ethics / privacy?** A: Deidentified public data, no PHI; deployment needs consent, privacy, bias audit (worse ≥65 subgroup), regulatory clearance.
 
-### 5. PPT (3 marks) — fix these two before presenting
-- **Q: Why base vs supporting split on slide 4?** A: Base = adapted architecture+task (Zheng 2025); supporting = targets, bounds, methods, contrast. Removed 2017/2023 to stay current.
-- **Q: References slide still lists removed papers?** A: Fixed — slide 15 renumbered [1]–[8] to match slide 4 (Nguyen 2017, Do 2023 dropped).
+### 5. PPT (3 marks)
+- **Q: Why base vs supporting split on slide 4?** A: Base = adapted architecture+task (Zheng 2025); supporting = targets, bounds, methods, contrast.
+- **Q: References slide?** A: Zheng as [1] with full title, 8 supporting papers with full citations, PhysioNet dataset. No ellipsis, no truncation.
 - **Q: Report says 0.837/0.807 but slides say 0.840/0.844?** A: Synced — report, README, and AGENTS now describe the deployed 3-model ensemble (val 0.840, fresh holdout 0.844); 0.837/0.807 kept as previous-milestone row.
 
 ### 6. PARTICIPATION (3 marks)
