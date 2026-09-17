@@ -60,6 +60,8 @@ It returns a 0-to-100 risk score with two explanations: temporal attention for i
 
 Three differences from the literature: we report false alarms, sensitivity, specificity, precision, lead time, and a NEWS2 comparison instead of AUC only; our fresh unseen 20% set-B holdout AUC of 0.844 exceeds the 0.840 validation; and we ship an end-to-end FastAPI path with alerts and HTTP/MQTT ingestion, not just a trained model.
 
+Fourth, SynCura is designed to learn from its mistakes. Every confirmed miss and false alarm is queued, clinician-reviewed, and weighted into the next offline retrain — so each version fails less where the last one did. We never patch weights on a single live case: the mistake triggers the lesson, batches teach it, and a fresh holdout re-validates it.
+
 ## Slide 7: Methodology / Proposed Approach
 
 First, PhysioNet 2012 with 12 selected features. Measurements are interpolated into regular sequences: 90-minute windows, 15-minute stride, population z-score normalization computed from training data only to avoid leakage.
@@ -140,7 +142,9 @@ Sequential data; best single architecture in Yan 2026 (beats Transformer/GRU). C
 
 Assigns importance to time steps — temporal explanation of which recent trajectory parts drove risk.
 
-### Is this system clinically deployable?
+### Does the system correct itself?
+
+Not live — weights are frozen after training. Correction is mistake-triggered and offline: confirmed misses and false alarms queue into weighted retraining, then a fresh holdout re-validates before redeploy. That is also the safe, regulatable way to do adaptive AI.
 
 No. Research prototype. Needs calibration, prospective testing, external validation, privacy, safety, and regulatory review.
 

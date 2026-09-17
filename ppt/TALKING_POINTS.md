@@ -24,7 +24,7 @@ Attention-LSTM that reads 12 vitals/labs over 90 minutes and gives a real-time 0
 3. Motivation: deterioration is a process; early + explainable = more review time
 4. Existing work: all models/vitals papers below — few go past AUC, none shipped a real-time path
 5. Base paper: Zheng 2025 TBAL — 0.936/0.919, hourly, 176K stays; RETROSPECTIVE till-discharge (peaks 98.9 at discharge = hindsight); we mirror architecture, restrict to 90-min only + add SHAP
-6. Proposed: rolling 90-min window → risk → temporal-attention + SHAP explanation → dashboard
+6. Proposed: rolling 90-min window → risk → temporal-attention + SHAP explanation → dashboard → misses/false alarms queue into weighted retraining
 7. Methodology: PhysioNet 2012 → interpolate → z-score (train-only) → LSTM+attention → FastAPI
 8. Expected outcome: live dashboard, 0–100 score, explanations, NEWS2 comparison, AUC 0.78–0.93 target
 9. Result: 0.840 / **0.844**, plus false alarms, lead time, NEWS2 benchmark
@@ -56,6 +56,7 @@ Dataset: PhysioNet / Computing in Cardiology Challenge 2012 — https://physione
 - **Why LSTM?** Sequential data; best single architecture in Yan 2026 (beats Transformer/GRU). Cheap streaming inference.
 - **Why attention?** Temporal explanation — which minutes mattered, shown per patient.
 - **Why better than papers?** They report AUC; we report false alarms, precision/sensitivity, lead time, NEWS2 comparison + a true unseen holdout.
+- **Does it correct itself?** A: Not live — weights frozen. Mistake-triggered offline loop: confirmed misses/false alarms → weighted retrain → fresh holdout → redeploy.
 - **Is it deployable?** No — research prototype. Needs calibration, prospective testing, external validation, regulatory review.
 - **PhysioNet age?** Known limitation; set-B holdout (0.844) is our honest generalization number.
 - **20 vs 12 features?** 20-feature variant scored worse (0.787 vs 0.807/0.844) — we keep 12.

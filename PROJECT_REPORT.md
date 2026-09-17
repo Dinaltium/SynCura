@@ -289,6 +289,7 @@ SHAP feature importance typically identifies:
 | Real-time metrics | Done | Live model performance |
 | Training UI | Done | Job management interface |
 | Discord/Telegram alerts | Done | External notifications |
+| Mistake-driven retraining loop | Planned | Confirmed misses/false alarms queue into weighted retraining |
 
 ---
 
@@ -326,6 +327,7 @@ cd frontend && npm install && npm run dev
 4. **Edge deployment** - TinyML on wearable devices for remote monitoring
 5. **MIMIC-IV migration** - Larger, more modern dataset
 6. **Prospective validation** - Real-time clinical trial
+7. **Mistake-driven retraining loop** - Queue clinician-confirmed misses and false alarms into weighted offline retraining, re-validated on a fresh holdout before redeploy (adaptive AI without live weight patching)
 
 ---
 
