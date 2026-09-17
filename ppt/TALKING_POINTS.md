@@ -11,6 +11,13 @@ Attention-LSTM that reads 12 vitals/labs over 90 minutes and gives a real-time 0
 - 2-layer LSTM, hidden 96, additive temporal attention, 12 features, 90-min window, stride 15
 - Ensemble of 3 LSTM models, logit-averaged
 
+## Training patients (memorize)
+- **Total:** 8,000 (set-a 4,000 + set-b 4,000)
+- **Training:** ~7,000 unique patients combined (s45/s48 trained on set-a only; c93 on set-a + 80% set-b)
+- **Val:** 20% patient split → 0.840
+- **Holdout:** fresh unseen 20% of set-b, ~800 patients → 0.844
+- s45/s48/c93 are just member IDs (training seeds) — same architecture, different data/seed
+
 ## Slide → line (15 slides)
 1. Title: SynCura — Predictive ICU Monitoring System (Attention-LSTM + real-time explainability)
 2. Problem: NEWS2/SOFA are threshold rules; they miss trends/direction/rate of change
