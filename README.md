@@ -42,7 +42,7 @@ python -m ml.train `
 
 This uses the full set-a (4,000 patients), 90-minute windows with 30-minute training stride (15-minute eval stride), proximity labeling (last 12h of each stay), population normalization, and early stopping. Metrics go to the latest `ml/training_runs/exp_*/<config>/metrics.json` (copied to `ml/metrics.json`), model to `ml/models/lstm_baseline.pt`, scaler stats to `ml/scaler.json`.
 
-**Deployed model (val AUC 0.837, set-b holdout AUC 0.807):** a 4-member logit-averaged ensemble (`s48 + xval-lr1e4 + s45 + s52`, all 12-feature f12-h96-w90) served from `ml/models/ensemble/*.pt` via multi-checkpoint support in `backend/inference.py`.
+**Deployed model (val AUC 0.840, fresh holdout AUC 0.844):** a 3-member logit-averaged ensemble (`s48 + c93 + s45`, all 12-feature f12-h96-w90) served from `ml/models/ensemble/*.pt` via multi-checkpoint support in `backend/inference.py`. (`c93` trained on set-a + 80% set-b, so the honest external number is the fresh unseen 20% set-b holdout.)
 
 For a quick smoke test only (not reportable): add `--max-patients 100 --epochs 2`.
 
@@ -60,7 +60,7 @@ uvicorn backend.app:app --reload --port 8000
 
 The backend will:
 - Initialize SQLite database at `backend/data/vitals.db`
-- Load the trained 4-model AttentionLSTM ensemble from `ml/models/ensemble/*.pt` (falls back to `ml/models/lstm_baseline.pt` if no ensemble dir)
+- Load the trained 3-model AttentionLSTM ensemble from `ml/models/ensemble/*.pt` (falls back to `ml/models/lstm_baseline.pt` if no ensemble dir)
 - Start listening on `http://localhost:8000`
 
 Available endpoints:

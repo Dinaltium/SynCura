@@ -164,8 +164,8 @@ Key design choices:
 - **Loss**: Weighted Binary Cross-Entropy with pos_weight (neg/pos ratio)
 - **Early Stopping**: Patience=14 epochs on validation AUC
 - **Min Delta**: 0.0005 AUC improvement required
-- **Data**: Full PhysioNet set-a (4,000 patients, stride-30 windows) minus the 20% validation cohort; evaluated on the original stride-15 split + set-b holdout
-- **Deployment**: 4-model logit-averaged ensemble (greedy forward selection gated on holdout AUC)
+- **Data**: Full PhysioNet set-a (4,000 patients, stride-30 windows) minus the 20% validation cohort; evaluated on the original stride-15 split + fresh unseen 20% set-b holdout
+- **Deployment**: 3-model logit-averaged ensemble `s48 + c93 + s45` (mixed old + combo training; `c93` trained on set-a + 80% set-b, so the honest external number is the fresh unseen 20% set-b holdout, not the full set-b)
 
 ---
 
@@ -391,9 +391,9 @@ PROJ/
 │   ├── sweep_*.py             # Experiment sweeps (rounds 8-17)
 │   ├── pick_ensemble.py       # Greedy holdout-gated ensemble selection
 │   ├── ensemble_best.json     # Deployed ensemble manifest
-│   ├── metrics.json           # Deployed metrics (val AUC 0.837, holdout 0.807)
-│   ├── scaler.json            # Population normalization stats (12 features)
-│   └── models/                # lstm_baseline.pt + ensemble/*.pt (4 members)
+ │   ├── metrics.json           # Deployed metrics (val AUC 0.840, fresh holdout 0.844)
+ │   ├── scaler.json            # Population normalization stats (12 features)
+ │   └── models/                # lstm_baseline.pt + ensemble/*.pt (3 members)
 ├── backend/
 │   ├── app.py                 # FastAPI endpoints
 │   ├── inference.py           # RiskScoreEngine (single + ensemble inference)
@@ -439,13 +439,13 @@ POST /ingest
 ```json
 GET /metrics
 {
-  "config": "ensemble-s48+xval-lr1e4+s45+s52",
-  "val_auc": 0.8371,
-  "val_accuracy": 0.7269,
-  "val_recall": 0.8142,
-  "holdout_auc": 0.8073,
-  "holdout_accuracy": 0.7245,
-  "holdout_recall": 0.7785
+  "config": "ensemble-s48+c93+s45",
+  "val_auc": 0.8401,
+  "val_accuracy": 0.7384,
+  "val_recall": 0.816,
+  "fresh_holdout_auc": 0.8441,
+  "fresh_holdout_accuracy": 0.7471,
+  "fresh_holdout_recall": 0.8066
 }
 ```
 

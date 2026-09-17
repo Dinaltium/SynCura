@@ -7,7 +7,7 @@
 Attention-LSTM that reads 12 vitals/labs over 90 minutes and gives a real-time 0–100 deterioration risk **with explanations** — the papers stop at AUC, we ship the path.
 
 ## Our numbers (memorize)
-- **0.844** unseen set-B holdout AUC (4,000 patients) > **0.840** validation → not overfit
+- **0.844** fresh unseen 20% set-B holdout AUC > **0.840** validation → not overfit
 - 2-layer LSTM, hidden 96, additive temporal attention, 12 features, 90-min window, stride 15
 - Ensemble of 3 LSTM models, logit-averaged
 
@@ -72,3 +72,55 @@ If asked "so what's missing?": name 2–3 and always tie back to Slide 10 upgrad
 - Don't say "clinical ready" — always "explainable research prototype".
 - Don't compare our numbers to Zheng 2025 (different data/inputs) — say "different scope: 12 vitals vs full EMR".
 - Repeated val gating inflates val AUC — always cite the holdout 0.844 as the honest number.
+
+## Judges Q&A bank (by rubric, 25 marks)
+
+### 1. PROBLEM (4 marks)
+- **Q: What exactly is the problem?** A: ICU deterioration is a process, not one bad reading. NEWS2/SOFA threshold single readings and miss direction, duration, interaction of trends. We build an early-warning aid scoring recent history with reasons.
+- **Q: Why not just use NEWS2/SOFA?** A: They are static, manual, single-timepoint rules with ~53% sensitivity and no trend learning. Our LSTM learns temporal patterns and reports lead time vs NEWS2>=7 live on the dashboard.
+- **Q: Who benefits?** A: Bedside reviewers get ranked risk + explanations + lead time; SDG 3 (timely review) and SDG 9 (ML+API+visualization pipeline).
+- **Q: Is this replacing doctors?** A: No — decision support only. Prototype, no autonomous action, needs prospective + regulatory review.
+
+### 2. BASE PAPER (4 marks)
+- **Q: Name the base paper fully.** A: Zheng, Luo, Zhu, Du, Lan, Zhou, Yang & Huang (2025), Development and Validation of a Dynamic Real-Time Risk Prediction Model for ICU Patients Based on Longitudinal Irregular Data, JMIR vol.27 e69293.
+- **Q: Method + data + result?** A: Time-aware bidirectional attention LSTM (TBAL) on 176,344 stays (MIMIC-IV + eICU), hourly updates; dynamic AUROC 0.936 MIMIC-IV / 0.919 eICU, recall 79.1%.
+- **Q: Why this base?** A: Closest architecture AND task match — attention-LSTM producing real-time interpretable ICU mortality risk from irregular time series, exactly our setup.
+- **Q: What is hour 12?** A: Their fixed static-task trigger: admission→hour-12 data predicts 1/2/4/7-day and in-hospital death. Stays <12h excluded. Dynamic tasks instead predict every hour.
+- **Q: Static vs dynamic?** A: Static = one prediction at hour 12 for fixed windows; dynamic = rolling next-24h prediction every hour till discharge.
+- **Q: What is the discharge/hindsight issue?** A: Retrospective till-discharge data; AUROC climbs to 98.9 at discharge because all info accumulated — hindsight, not early warning. Cross-hospital falls to 0.81/0.76, no prospective test. We ban future info with a 90-min-only window.
+- **Q: How did you adapt it?** A: Same attention-LSTM direction on PhysioNet 2012, 12-feature 90-min window for streaming, plus SHAP feature explanations alongside temporal attention (they use attention + Integrated Gradients).
+
+### 3. NOVELTY (4 marks)
+- **Q: What is novel if LSTM exists?** A: Integration novelty, not architecture novelty: temporal attention + real-time FastAPI serving + React dashboard + dual explainability (attention for when, SHAP for what) in one prototype.
+- **Q: Papers report AUC — what do you add?** A: False alarms, sensitivity/specificity/precision, lead-time estimate, NEWS2>=7 inline comparison, threshold slider, calibration path — the decision metrics clinicians need.
+- **Q: Proof against overfitting?** A: Fresh unseen 20% set-B holdout 0.844 beats validation 0.840 (full set-b N/A since c93 trained on 80% of set-b). Holdout is the honest number.
+- **Q: Why attention + SHAP both?** A: Attention = which minutes mattered; SHAP = which features mattered. Per-patient inspectable on dashboard.
+- **Q: Why is 90-min window novel vs base?** A: Base uses full stay till discharge; we force early-warning conditions — recent window only, deployable streaming.
+
+### 4. FEASIBILITY (4 marks)
+- **Q: Dataset and features?** A: PhysioNet 2012, 4,000 train + 4,000 holdout; 12 features (HR, RespRate, Temp, NISysABP, NIDiasABP, SpO2→SaO2 mapped + GCS, BUN, Creatinine, WBC, Platelets, Glucose).
+- **Q: SpO2 mapping valid?** A: PhysioNet 2012 has SaO2 not SpO2; same units (%), arterial gold standard — slot stays named SpO2 so train/inference/frontend match.
+- **Q: Leakage controls?** A: Train-only population z-score, patient-level GroupShuffleSplit, proximity labeling (last 12h), holdout never touched.
+- **Q: Why 12 not 20 features?** A: Tested — 20-feature variant scored worse (0.787 vs 0.844). Keep 12.
+- **Q: Model size / speed?** A: 2-layer LSTM h96, dropout 0.3, ~lightweight; thread-safe RiskScoreEngine, 0–100 score per ingest; runs on CPU.
+- **Q: Why ensemble of 3?** A: Logit-averaged, greedy holdout-gated selection; ensemble beats single seeds and holdout>val shows stability.
+- **Q: Missing vitals live?** A: Interpolation + population-mean fill now; RealMIP-style generative recovery scouted.
+- **Q: Frontend — real or fake?** A: Honest answer: dashboard runs on synthetic scenario stream (5 scenarios); backend replay path with real PhysioNet data exists via /ingest. Full wiring is future work.
+- **Q: Calibration / thresholds?** A: Threshold slider live-tunes sensitivity/specificity/false alarms; decision-curve analysis + prospective pilot are the stated next steps.
+- **Q: Ethics / privacy?** A: Deidentified public data, no PHI; deployment needs consent, privacy, bias audit (worse ≥65 subgroup), regulatory clearance.
+
+### 5. PPT (3 marks) — fix these two before presenting
+- **Q: Why base vs supporting split on slide 4?** A: Base = adapted architecture+task (Zheng 2025); supporting = targets, bounds, methods, contrast. Removed 2017/2023 to stay current.
+- **Q: References slide still lists removed papers?** A: Fixed — slide 15 renumbered [1]–[8] to match slide 4 (Nguyen 2017, Do 2023 dropped).
+- **Q: Report says 0.837/0.807 but slides say 0.840/0.844?** A: Synced — report, README, and AGENTS now describe the deployed 3-model ensemble (val 0.840, fresh holdout 0.844); 0.837/0.807 kept as previous-milestone row.
+
+### 6. PARTICIPATION (3 marks)
+- **Q: Who did what?** A: Fizan Feroz — ML pipeline + backend; teammates — frontend + integration. Each member owns: one can demo dashboard scenarios, one can explain attention/SHAP output, one can defend metrics/holdout.
+- **Q: Equal contribution?** A: Show commits across ml/, backend/, frontend/; rehearse handoffs per slide.
+
+### 7. QUESTIONS / DEFENSE (3 marks)
+- **Q: Is 0.844 clinically enough?** A: Strong prototype, not deployment bar. Field range for vitals-only is 0.70–0.85; Wu upper bound 0.926. Needs calibration + prospective validation.
+- **Q: Why PhysioNet 2012, not MIMIC-IV?** A: Public, reproducible, established benchmark; age acknowledged; eICU/MIMIC validation is slide-10 path.
+- **Q: Lead time — how measured?** A: Average early-warning hours vs NEWS2>=7 crossing on dashboard analytics; must be measured properly, not assumed.
+- **Q: Biggest limitation in one line?** A: Single retrospective dataset, no cross-hospital or prospective evidence — every limit has a named upgrade on slide 10.
+- **Q: Six more months?** A: eICU/MIMIC external validation, RealMIP imputation, time-aware attention, prospective pilot with decision curves.
