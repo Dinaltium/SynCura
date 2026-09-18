@@ -1,6 +1,8 @@
 # SynCura — Literature Review Document
 ### Predictive ICU Monitoring System Using Attention-Based LSTM with Real-Time Explainability
 **P.A. College of Engineering | Department of Computer Science & Engineering**
+**Team: Abdul Ahad Ikkeri (4PA24CS002), Fathima Reeha (4PA24CS026), Fizan Feroz (4PA24CS032)**
+**Date: 2026-09-18 | Version: 1.1 | Sources: 8 papers + PhysioNet 2012 dataset (matches `ppt/SynCura_Deck_V3_FINAL.pptx` Slide 15)**
 
 ## 1. Objective of this Review
 
@@ -11,6 +13,10 @@ This document reviews the base paper and supporting works used in the SynCura pr
 3. **What SynCura used** — the specific idea, method, metric, or design decision adopted from that work.
 
 The comparative summary is given as a table in Section 2. Detailed notes follow in Section 3.
+
+**Selection method.** Papers were selected to cover (a) the closest architecture-task match for the base design, (b) realistic LSTM performance targets, (c) vital-sign-only and multimodal contrasts, (d) missing-data and external-validation practice, and (e) interpretable early-warning and streaming/wearable deployment. Preference was given to works cited in the final presentation so the document, deck, and report stay consistent.
+
+**How to read the numbers.** AUROC/AUC values come from different cohorts, label definitions, windows, and splits; they are reference points, not head-to-head comparisons with SynCura. SynCura's own numbers are validation AUC 0.840 and fresh unseen 20% set-B holdout AUC 0.844 (95% CI 0.836–0.852), per `ppt/figs/metrics.json`.
 
 ## 2. Comparative Summary Table
 
@@ -133,20 +139,22 @@ SynCura addresses this narrower integration gap with:
 
 ## 7. References
 
-[1] Z. Zheng et al., Development and Validation of a Dynamic Real-Time Risk Prediction Model for ICU Patients Based on Longitudinal Irregular Data: Multicenter Retrospective Study, JMIR 27:e69293, 2025.
+[1] Z. Zheng et al., Development and Validation of a Dynamic Real-Time Risk Prediction Model for ICU Patients Based on Longitudinal Irregular Data: Multicenter Retrospective Study, JMIR 27:e69293, 2025. https://doi.org/10.2196/69293
 
 [2] Y. Wang, Y. Bai, and G. Jin, Explainable Deep-Learning Models for Predicting ICU Patient Outcome, Frontiers in Physiology 17, 2026.
 
-[3] Z. Yan et al., Deep Learning-Based In-Hospital Mortality Prediction Using Long-Term Sequential Data in ICU Patients: Multi-Center Validation Study, PeerJ 14:e21631, 2026.
+[3] Z. Yan et al., Deep Learning-Based In-Hospital Mortality Prediction Using Long-Term Sequential Data in ICU Patients: Multi-Center Validation Study, PeerJ 14:e21631, 2026. https://doi.org/10.7717/peerj.21631
 
-[4] B. Sadanandan, Multimodal Deep Learning for Early Prediction of Patient Deterioration in the ICU: Integrating Time-Series EHR Data with Clinical Notes, arXiv:2603.14719, 2026.
+[4] B. Sadanandan, Multimodal Deep Learning for Early Prediction of Patient Deterioration in the ICU: Integrating Time-Series EHR Data with Clinical Notes, arXiv:2603.14719, 2026. https://arxiv.org/abs/2603.14719
 
-[5] Y. Wu et al., Revisiting the Potential Value of Vital Signs in the Real-Time Prediction of Mortality Risk in ICU Patients, J. Big Data 11:40, 2024.
+[5] Y. Wu et al., Revisiting the Potential Value of Vital Signs in the Real-Time Prediction of Mortality Risk in ICU Patients, J. Big Data 11:40, 2024. https://doi.org/10.1186/s40537-024-00896-8
 
-[6] P. Xie et al., Unlocking the Potential of Real-Time ICU Mortality Prediction: Redefining Risk Assessment with Continuous Data Recovery, npj Digital Medicine 8:733, 2025.
+[6] P. Xie et al., Unlocking the Potential of Real-Time ICU Mortality Prediction: Redefining Risk Assessment with Continuous Data Recovery, npj Digital Medicine 8:733, 2025. https://doi.org/10.1038/s41746-025-02114-y
 
 [7] E. Choi et al., Deep Interpretable Early Warning System for the Detection of Clinical Deterioration, IEEE J-BHI 24(9), 2020.
 
 [8] M. R. Scheid et al., Development and Validation of a Clinical Wearable Deep Learning Based Continuous In-Hospital Deterioration Prediction Model, Nature Communications 16:9513, 2025.
 
 [9] PhysioNet, Computing in Cardiology Challenge 2012, https://physionet.org/content/challenge-2012/
+
+*Consistency check (2026-09-18): reference list matches `ppt/SynCura_Deck_V3_FINAL.pptx` Slide 15; SynCura results match `ppt/figs/metrics.json` (val AUC 0.840, holdout AUC 0.844, 95% CI 0.836–0.852); table covers all 9 deck sources with findings, limitations, and adoption notes.*
