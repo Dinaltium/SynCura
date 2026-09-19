@@ -9,7 +9,8 @@ import torch
 import numpy as np
 
 
-FEATURE_NAMES = ['HR', 'RespRate', 'Temp', 'SysBP', 'DiasBP', 'SpO2']
+FEATURE_NAMES = ['HR', 'RespRate', 'Temp', 'NISysABP', 'NIDiasABP', 'SpO2',
+                 'GCS', 'BUN', 'Creatinine', 'WBC', 'Platelets', 'Glucose']
 
 
 def compute_shap_explanation(model, patient_sequence, feature_names=None, n_background=20):
@@ -41,9 +42,12 @@ def compute_shap_explanation(model, patient_sequence, feature_names=None, n_back
         with torch.no_grad():
             return torch.sigmoid(model(x)).numpy()
 
-    # Background: mean-centered noise around the patient's data
-    bg_mean = patient_sequence.mean(axis=0, keepdims=True)
-    background = bg_mean + np.random.randn(n_background, n_features) * 0.1
+    # Background: mean-centered noise around the patient's data.
+    # Must have the same (window, features) shape as the input so the
+    # flattened background matches what predict_fn() reshapes.
+    bg_mean = patient_sequence.mean(axis=0, keepdims=True)  # (1, n_features)
+    noise = np.random.randn(n_background, window_size, n_features) * 0.1
+    background = np.broadcast_to(bg_mean, (n_background, window_size, n_features)).copy() + noise
     bg_flat = background.reshape(n_background, -1)
 
     explainer = shap.KernelExplainer(predict_fn, bg_flat)

@@ -9,11 +9,12 @@
     "ml/models/ensemble/c93.pt",
     "ml/models/ensemble/s45.pt"
   ],
+  "scalers": [
+    "ml/scaler.json",
+    "ml/scaler_combo8k.json",
+    "ml/scaler.json"
+  ],
   "arch": [
-    {
-      "bidirectional": false,
-      "hidden_size": 96
-    },
     {
       "bidirectional": false,
       "hidden_size": 96
@@ -28,10 +29,12 @@
     }
   ],
   "val_auc": 0.8401,
-  "val_accuracy": 0.7407965997120723,
-  "val_recall": 0.8172743055555556,
+  "val_accuracy": 0.7384,
+  "val_recall": 0.816,
   "holdout_auc": null,
-  "holdout_accuracy": 0.7273087842351369,
-  "holdout_recall": 0.7551349765258216,
-  "fresh_holdout_auc": 0.8441
+  "holdout_accuracy": null,
+  "holdout_recall": null,
+  "holdout_note": "full set-b holdout N/A (c93 member trained on 80pct of set-b)",
+  "fresh_holdout_auc": 0.8441,
+  "fresh_holdout_note": "20pct of set-b (seed 123); unseen by weights but USED during ensemble selection, not a locked final test"
 }

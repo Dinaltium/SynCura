@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Routes, Route, Link, NavLink } from 'react-router-dom'
 import TrainingConfig from './components/TrainingConfig'
 import TrainingMonitor from './components/TrainingMonitor'
@@ -8,6 +8,7 @@ import WelcomePage from './components/WelcomePage'
 import ArchitecturePage from './components/ArchitecturePage'
 import SensorWaveform from './components/SensorWaveform'
 import { BASE_PATIENTS, SimulationProvider, useSimulation } from './simulationContext'
+import { API_URL } from './api'
 import syncuraLogo from './assets/syncura-logo.png'
 import './welcome.css'
 
@@ -17,24 +18,6 @@ const defaultModelStats = [
   { label: 'Precision', value: '...', tone: 'good' },
   { label: 'Recall', value: '...', tone: 'warn' },
 ]
-
-const DISCORD_WEBHOOK_URL = import.meta.env.VITE_DISCORD_WEBHOOK_URL
-const DISCORD_ALERT_COOLDOWN_MS = 2 * 60 * 1000
-
-async function sendDiscordAlertFromFrontend(message) {
-  if (!DISCORD_WEBHOOK_URL) return
-  try {
-    await fetch(DISCORD_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        content: message,
-      }),
-    })
-  } catch (error) {
-    console.warn('Discord alert send failed:', error)
-  }
-}
 
 function MiniIcon({ name }) {
   const common = {
@@ -341,11 +324,10 @@ function Dashboard({ theme, onToggleTheme }) {
   } = useSimulation()
   const [selectedPatientId, setSelectedPatientId] = useState(BASE_PATIENTS[0].patient_id)
   const [alertThreshold, setAlertThreshold] = useState(75)
-  const sentAlertsRef = useRef(new Map())
   const [liveModelStats, setLiveModelStats] = useState(defaultModelStats)
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/metrics')
+    fetch(`${API_URL}/metrics`)
       .then(r => r.json())
       .then(data => {
         if (!data.error) {
@@ -396,20 +378,9 @@ function Dashboard({ theme, onToggleTheme }) {
     }
   }, [patientQueue, selectedPatientId])
 
-  useEffect(() => {
-    if (!DISCORD_WEBHOOK_URL) return
-    const now = Date.now()
-    alertItems.forEach((alert) => {
-      const key = alert.patientId
-      const lastSentAt = sentAlertsRef.current.get(key) || 0
-      // Always allow critical alerts to bypass the per-patient cooldown so
-      // clinicians receive immediate, high-severity notifications.
-      if (alert.level !== 'critical' && now - lastSentAt < DISCORD_ALERT_COOLDOWN_MS) return
-      // record send time for patient to avoid spam of follow-ups
-      sentAlertsRef.current.set(key, now)
-      void sendDiscordAlertFromFrontend(`🚨 [SynCura ${alert.level.toUpperCase()}] ${alert.text}`)
-    })
-  }, [alertItems])
+  // NOTE: Discord delivery is backend-only (POST /ingest -> webhook).
+  // The browser never holds a webhook secret. Alert cooldowns below are
+  // display-only; the backend enforces the real per-patient cooldown.
 
   return (
     <Shell theme={theme} onToggleTheme={onToggleTheme}>
@@ -446,6 +417,13 @@ function Dashboard({ theme, onToggleTheme }) {
           <small>NEWS2 benchmark</small>
         </article>
       </section>
+
+      <div className="simulation-banner" role="note" aria-label="Simulation disclaimer">
+        <strong>Simulation mode — synthetic data.</strong>
+        <span> Patient vitals, risk scores, explanations, NEWS2 comparison and lead times on this
+        dashboard are generated locally for demonstration, not live outputs of the trained model.
+        Model metrics (AUC 0.844 holdout) come from the offline PhysioNet evaluation.</span>
+      </div>
 
       <section className="scenario-panel" aria-label="Scenario simulation controls">
         <div>

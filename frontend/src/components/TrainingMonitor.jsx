@@ -139,7 +139,7 @@ export default function TrainingMonitor() {
             <div className="mb-8 pb-8 border-b">
               <h2 className="text-lg font-semibold text-gray-800 mb-4">Current Metrics</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {job.metrics.train_loss !== undefined && (
+                {job.metrics.train_loss != null && (
                   <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg">
                     <p className="text-xs text-gray-600 uppercase">Train Loss</p>
                     <p className="text-2xl font-bold text-orange-600">
@@ -147,7 +147,7 @@ export default function TrainingMonitor() {
                     </p>
                   </div>
                 )}
-                {job.metrics.val_accuracy !== undefined && (
+                {job.metrics.val_accuracy != null && (
                   <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
                     <p className="text-xs text-gray-600 uppercase">Val Accuracy</p>
                     <p className="text-2xl font-bold text-blue-600">
@@ -155,7 +155,7 @@ export default function TrainingMonitor() {
                     </p>
                   </div>
                 )}
-                {job.metrics.auc !== undefined && (
+                {job.metrics.auc != null && (
                   <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
                     <p className="text-xs text-gray-600 uppercase">AUC</p>
                     <p className="text-2xl font-bold text-green-600">
@@ -163,7 +163,7 @@ export default function TrainingMonitor() {
                     </p>
                   </div>
                 )}
-                {job.metrics.accuracy !== undefined && (
+                {job.metrics.accuracy != null && (
                   <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
                     <p className="text-xs text-gray-600 uppercase">Accuracy</p>
                     <p className="text-2xl font-bold text-purple-600">
@@ -171,7 +171,7 @@ export default function TrainingMonitor() {
                     </p>
                   </div>
                 )}
-                {job.metrics.precision !== undefined && (
+                {job.metrics.precision != null && (
                   <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-lg">
                     <p className="text-xs text-gray-600 uppercase">Precision</p>
                     <p className="text-2xl font-bold text-red-600">
@@ -179,7 +179,7 @@ export default function TrainingMonitor() {
                     </p>
                   </div>
                 )}
-                {job.metrics.recall !== undefined && (
+                {job.metrics.recall != null && (
                   <div className="bg-gradient-to-br from-pink-50 to-pink-100 p-4 rounded-lg">
                     <p className="text-xs text-gray-600 uppercase">Recall</p>
                     <p className="text-2xl font-bold text-pink-600">

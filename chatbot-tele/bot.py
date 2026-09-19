@@ -1,10 +1,11 @@
 import logging
+import os
 from telegram import Update, Bot
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# --- CONFIG ---
-BOT_TOKEN = "8638403305:AAH_-ZTrG80-q-VJ6ME4YuiW4NsTASmrDpU"  # Replace with your token from @BotFather
-CHAT_ID = "7480851790"
+# --- CONFIG (from environment; never commit real tokens) ---
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
 # --- LOGGING ---
 logging.basicConfig(
@@ -24,7 +25,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def hello(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Responds to /hello command — your first alert test."""
-    await update.message.reply_text("🌍 Hello, Ahad you are gay bro.bitchass")
+    await update.message.reply_text("🌍 Hello from SynCura alerts!")
 
 async def test_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send a test alert via /testalert command."""
@@ -33,6 +34,8 @@ async def test_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- MAIN ---
 if __name__ == "__main__":
+    if not BOT_TOKEN:
+        raise SystemExit("TELEGRAM_BOT_TOKEN is not set; refusing to start.")
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))

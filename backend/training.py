@@ -1,8 +1,14 @@
-"""ML Training Service for backend"""
+"""ML Training Service for backend.
+
+Safety contract: training NEVER overwrites the serving model or scaler.
+Each job writes to ml/models/<job_id>.pt + <job_id>_scaler.json. Promotion
+to serving is an explicit manual step (see ml/deployed_manifest.json).
+"""
 import json
 import os
 import threading
 import queue
+import uuid
 from datetime import datetime
 from typing import Dict, List, Optional
 import numpy as np
@@ -11,6 +17,8 @@ from sklearn.model_selection import GroupShuffleSplit
 from ml.dataset import load_and_create_sequences
 from ml.train_lstm import train as quick_train
 from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score
+
+JOBS_STORE = os.path.join('backend', 'data', 'training_jobs.json')
 
 
 class TrainingJob:
@@ -23,9 +31,10 @@ class TrainingJob:
         self.end_time = None
         self.current_epoch = 0
         self.total_epochs = config.get('epochs', 5)
+        # Scalars (not lists): the frontend formats these with toFixed().
         self.metrics = {
-            "train_loss": [],
-            "val_accuracy": [],
+            "train_loss": None,
+            "val_accuracy": None,
             "auc": None,
             "accuracy": None,
             "precision": None,
@@ -51,19 +60,53 @@ class TrainingJob:
 
 
 class TrainingManager:
-    """Manages ML training jobs"""
-    
+    """Manages ML training jobs (single active job; jobs persist to disk)."""
+
     def __init__(self):
         self.jobs: Dict[str, TrainingJob] = {}
         self.active_job: Optional[str] = None
         self.history: List[Dict] = []
         self._lock = threading.Lock()
-        
+        self._load_store()
+
+    def _load_store(self):
+        try:
+            if os.path.exists(JOBS_STORE):
+                with open(JOBS_STORE) as f:
+                    data = json.load(f)
+                for jd in data.get('jobs', []):
+                    job = TrainingJob(jd['job_id'], jd.get('config', {}))
+                    job.status = jd.get('status', 'pending')
+                    if job.status == 'running':
+                        job.status = 'failed'
+                        job.error_message = 'interrupted by backend restart'
+                    job.start_time = jd.get('start_time')
+                    job.end_time = jd.get('end_time')
+                    job.current_epoch = jd.get('current_epoch', 0)
+                    job.total_epochs = jd.get('total_epochs', job.total_epochs)
+                    if isinstance(jd.get('metrics'), dict):
+                        job.metrics.update(jd['metrics'])
+                    job.error_message = job.error_message or jd.get('error_message')
+                    self.jobs[job.job_id] = job
+                self.history = data.get('history', [])
+        except Exception as e:
+            print(f'[Training] Warning: failed to load job store: {e}')
+
+    def _save_store(self):
+        try:
+            os.makedirs(os.path.dirname(JOBS_STORE), exist_ok=True)
+            with open(JOBS_STORE, 'w') as f:
+                json.dump({'jobs': [j.to_dict() for j in self.jobs.values()],
+                           'history': self.history}, f, indent=2)
+        except Exception as e:
+            print(f'[Training] Warning: failed to persist job store: {e}')
+
     def create_job(self, config: Dict) -> TrainingJob:
-        """Create a new training job"""
-        job_id = f"job_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        """Create a new training job (collision-free UUID)."""
+        job_id = f"job_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
         job = TrainingJob(job_id, config)
         self.jobs[job_id] = job
+        self._save_store()
         return job
     
     def get_job(self, job_id: str) -> Optional[TrainingJob]:
@@ -141,9 +184,10 @@ class TrainingManager:
             n_pos = int((y_train == 1).sum())
             pos_weight = n_neg / max(1, n_pos)
             
-            # Train model
+            # Train model (hidden_size/window come from the job config so the
+            # artifact records what was actually trained)
             job.progress_queue.put({"type": "status", "message": "Starting training..."})
-            
+
             model, _ = quick_train(
                 X_train, y_train,
                 epochs=job.total_epochs,
@@ -153,22 +197,29 @@ class TrainingManager:
                 pos_weight=pos_weight,
                 dropout=config.get('dropout', None),
                 weight_decay=config.get('weight_decay', 0.0),
+                hidden_size=config.get('hidden_size', 64),
             )
-            
+
             # Evaluate on validation set
             job.progress_queue.put({"type": "status", "message": "Evaluating on validation set..."})
             metrics = self._evaluate_model(model, X_val, y_val)
             job.metrics.update(metrics)
-            
-            # Save model
-            model_path = config.get('model_output', 'ml/models/lstm_baseline.pt')
+
+            # Save model + scaler to JOB-SCOPED paths. Never overwrite the
+            # serving artifacts (ml/models/lstm_baseline.pt, ml/scaler.json,
+            # ml/models/ensemble/). Promotion is manual via deployed_manifest.
+            model_path = config.get('model_output', f'ml/models/{job.job_id}.pt')
             os.makedirs(os.path.dirname(model_path), exist_ok=True)
             torch.save(model.state_dict(), model_path)
 
-            # Save scaler stats for inference
-            with open('ml/scaler.json', 'w') as f:
-                json.dump({'mean': [float(v) for v in train_mean],
-                           'std': [float(v) for v in train_std]}, f, indent=2)
+            scaler_payload = {'features': config.get('vital_features'),
+                              'mean': [float(v) for v in train_mean],
+                              'std': [float(v) for v in train_std]}
+            scaler_path = os.path.splitext(model_path)[0] + '_scaler.json'
+            with open(scaler_path, 'w') as f:
+                json.dump(scaler_payload, f, indent=2)
+            job.progress_queue.put({"type": "status",
+                                    "message": f"Saved isolated artifacts: {model_path} (NOT promoted to serving)"})
             
             job.status = "completed"
             job.end_time = datetime.now().isoformat()
@@ -191,20 +242,22 @@ class TrainingManager:
             self.active_job = None
             # Save to history
             self.history.append(job.to_dict())
-    
+            self._save_store()
+
     def _training_progress_callback(self, job: TrainingJob):
-        """Create a progress callback for training"""
+        """Create a progress callback for training (scalar metrics)."""
         def callback(epoch: int, metrics: Dict):
             job.current_epoch = epoch
             if 'train_loss' in metrics:
-                job.metrics['train_loss'].append(float(metrics['train_loss']))
+                job.metrics['train_loss'] = float(metrics['train_loss'])
             if 'val_accuracy' in metrics:
-                job.metrics['val_accuracy'].append(float(metrics['val_accuracy']))
+                job.metrics['val_accuracy'] = float(metrics['val_accuracy'])
             job.progress_queue.put({
                 "type": "progress",
                 "epoch": epoch,
                 "metrics": metrics
             })
+            self._save_store()
         return callback
     
     @staticmethod

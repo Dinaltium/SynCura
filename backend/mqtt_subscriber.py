@@ -11,7 +11,9 @@ except ImportError:
 
 MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
-TOPIC = "vitals/#"
+MQTT_USERNAME = os.getenv("MQTT_USERNAME", "")
+MQTT_PASSWORD = os.getenv("MQTT_PASSWORD", "")
+TOPIC = os.getenv("MQTT_TOPIC", "vitals/#")
 
 REQUIRED_FIELDS = {"patient_id", "timestamp"}
 
@@ -49,5 +51,7 @@ client.on_connect = on_connect
 client.on_message = on_message
 
 if __name__ == "__main__":
+    if MQTT_USERNAME:
+        client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD or None)
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_forever()

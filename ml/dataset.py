@@ -107,6 +107,11 @@ def create_sequences_from_physionet(data_list, vital_features=None, window_minut
     Remaining NaNs (columns entirely missing for a patient) are left as NaN;
     callers fill them with the training-set mean before normalizing.
 
+    Windows are CAUSAL: each window is sliced from raw data first and
+    interpolated only within itself, so no future information leaks into
+    early windows. NOTE: checkpoints trained before this fix used
+    whole-stay interpolation and must be retrained for a fair comparison.
+
     `gap_channels`: when True, append 12 time-since-last-observation channels
     (minutes since the feature was actually measured, 0 = observed now, capped
     at `window_minutes`). This preserves the irregular-sampling signal that
@@ -137,28 +142,31 @@ def create_sequences_from_physionet(data_list, vital_features=None, window_minut
         # Only use columns that exist; fill missing columns with NaN (not zero)
         minute_index = range(int(df_pivot.index.min()), int(df_pivot.index.max()) + 1)
         df_vitals = pd.DataFrame({f: resolved[f] for f in available}, index=df_pivot.index)
-        df_vitals = df_vitals.reindex(index=minute_index, columns=vital_features)
-        if gap_channels:
-            observed = df_vitals.notna().values.astype(np.float32)
-        df_vitals = df_vitals.interpolate(method='linear', limit_direction='both')
-        df_vitals = df_vitals.ffill().bfill()
+        df_raw = df_vitals.reindex(index=minute_index, columns=vital_features)
 
         seq_len = window_minutes
-        if len(df_vitals) < seq_len:
+        if len(df_raw) < seq_len:
             continue
 
         if label_mode == 'last':
-            starts = [len(df_vitals)]
+            starts = [len(df_raw)]
         elif label_mode == 'proximity':
-            cutoff = max(seq_len, len(df_vitals) - horizon_hours * 60)
-            starts = range(cutoff, len(df_vitals), stride)
+            cutoff = max(seq_len, len(df_raw) - horizon_hours * 60)
+            starts = range(cutoff, len(df_raw), stride)
         else:  # 'all'
-            starts = range(seq_len, len(df_vitals), stride)
+            starts = range(seq_len, len(df_raw), stride)
 
         for i in starts:
-            window = df_vitals.iloc[i - seq_len:i].values
+            # CAUSAL windowing: slice the RAW window first, then interpolate
+            # ONLY within the window. The previous code interpolated the whole
+            # stay before slicing, letting future measurements leak into early
+            # windows. Models trained before this fix need retraining.
+            window_raw = df_raw.iloc[i - seq_len:i]
+            obs_win = window_raw.notna().values.astype(np.float32)
+            window_df = window_raw.interpolate(method='linear', limit_direction='both')
+            window_df = window_df.ffill().bfill()
+            window = window_df.values
             if gap_channels:
-                obs_win = observed[i - seq_len:i]
                 gaps = np.zeros_like(obs_win, dtype=np.float32)
                 for c in range(obs_win.shape[1]):
                     g = 0.0

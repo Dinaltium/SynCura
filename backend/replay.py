@@ -46,16 +46,19 @@ def load_physionet_patient(file_path):
     for col in df_pivot.columns:
         df_pivot[col] = pd.to_numeric(df_pivot[col], errors='coerce')
     
+    # Map PhysioNet source names to the inference feature names so replayed
+    # data actually populates the model inputs (e.g. SaO2 -> SpO2).
+    ALIASES = {'SaO2': 'SpO2'}
     events = []
     for idx, row in df_pivot.iterrows():
         event = {'patient_id': patient_id, 'timestamp': float(idx) * 60}  # convert to seconds
         for col in df_pivot.columns:
             val = row[col]
             if pd.notna(val):
-                event[col] = float(val)
+                event[ALIASES.get(col, col)] = float(val)
         if len(event) > 2:  # has at least one vital
             events.append(event)
-    
+
     return events
 
 

@@ -142,7 +142,7 @@ export default function TrainingJobsList() {
                     {/* Metrics Preview */}
                     {job.metrics && Object.keys(job.metrics).length > 0 && (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                        {job.metrics.train_loss !== undefined && (
+                        {job.metrics.train_loss != null && (
                           <div className="bg-orange-50 p-2 rounded">
                             <p className="text-xs text-gray-600">Loss</p>
                             <p className="font-semibold text-orange-600">
@@ -150,7 +150,7 @@ export default function TrainingJobsList() {
                             </p>
                           </div>
                         )}
-                        {job.metrics.val_accuracy !== undefined && (
+                        {job.metrics.val_accuracy != null && (
                           <div className="bg-blue-50 p-2 rounded">
                             <p className="text-xs text-gray-600">Val Acc</p>
                             <p className="font-semibold text-blue-600">
@@ -158,7 +158,7 @@ export default function TrainingJobsList() {
                             </p>
                           </div>
                         )}
-                        {job.metrics.auc !== undefined && (
+                        {job.metrics.auc != null && (
                           <div className="bg-green-50 p-2 rounded">
                             <p className="text-xs text-gray-600">AUC</p>
                             <p className="font-semibold text-green-600">
@@ -166,7 +166,7 @@ export default function TrainingJobsList() {
                             </p>
                           </div>
                         )}
-                        {job.metrics.accuracy !== undefined && (
+                        {job.metrics.accuracy != null && (
                           <div className="bg-purple-50 p-2 rounded">
                             <p className="text-xs text-gray-600">Acc</p>
                             <p className="font-semibold text-purple-600">

@@ -146,17 +146,13 @@ def _dispatch_discord_live_alerts(vital: dict, risk_score: float):
         if levels.get(level, 0) > levels.get(highest, 0):
             highest = level
 
-    # Apply patient-level cooldown to avoid multiple messages.
-    # Critical alerts should bypass the patient-level cooldown so clinicians
-    # receive immediate notification for high-severity events.
-    if highest != 'critical':
-        if not _should_send_patient_alert(patient_id):
-            logger.debug("Suppressed alerts for %s due to cooldown", patient_id)
-            return
-    else:
-        # record the send time for the patient-level key so subsequent alerts
-        # in the cooldown window are still suppressed (prevents spamming).
-        _last_alert_sent[(patient_id, _PATIENT_COOLDOWN_KEY)] = time.time()
+    # Apply patient-level cooldown to ALL severities (including critical).
+    # The first critical alert for a patient is always delivered because the
+    # cooldown key is empty; repeats are suppressed for ALERT_COOLDOWN_SECONDS.
+    # This prevents a crashing patient from flooding the channel on every ingest.
+    if not _should_send_patient_alert(patient_id):
+        logger.debug("Suppressed alerts for %s due to cooldown", patient_id)
+        return
 
     message = f"[SynCura {highest.upper()}] Patient {patient_id}: " + "; ".join(texts)
     # Fire in background thread to avoid blocking the request
@@ -188,7 +184,12 @@ class TrainingConfig(BaseModel):
     batch_size: int = 32
     learning_rate: float = 0.001
     max_patients: int = 100
-    vital_features: list = ["HR", "RespRate", "Temp", "NISysABP", "NIDiasABP", "SpO2"]
+    # Deployment contract: 12 features, 90-min window, hidden 96. Custom
+    # configs train into isolated job artifacts and NEVER overwrite serving.
+    vital_features: list = ["HR", "RespRate", "Temp", "NISysABP", "NIDiasABP", "SpO2",
+                            "GCS", "BUN", "Creatinine", "WBC", "Platelets", "Glucose"]
+    window: int = 90
+    hidden_size: int = 96
     stride: int = 15
     label_mode: str = "proximity"
     horizon_hours: float = 12.0
@@ -196,7 +197,14 @@ class TrainingConfig(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    model_loaded = inference_engine.model is not None or bool(inference_engine.models)
+    return {
+        "status": "ok" if model_loaded else "degraded",
+        "model_loaded": model_loaded,
+        "ensemble_members": len(inference_engine.models),
+        "degraded": inference_engine.degraded,
+        "load_error": inference_engine.load_error,
+    }
 
 
 @app.post("/ingest")
@@ -204,8 +212,14 @@ def ingest_vital(vital: VitalRecord):
     """Ingest a vital sign reading, compute risk score, and store."""
     vital_dict = vital.dict(exclude_none=True)
 
-    # Compute risk score via inference engine
+    # Compute risk score via inference engine (None = model missing/failed)
     risk_score = inference_engine.add_vital(vital_dict['patient_id'], vital_dict)
+    if risk_score is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Model unavailable: inference failed or no model loaded. "
+                   f"load_error={inference_engine.load_error}",
+        )
     vital_dict['risk_score'] = risk_score
 
     # Store to database
@@ -232,6 +246,12 @@ def get_patient(patient_id: str):
     """Get patient details and recent vitals."""
     vitals = get_latest_vitals(patient_id, limit=20)
     risk = inference_engine.get_risk_score(patient_id)
+    def _val(row, idx):
+        try:
+            return row[idx]
+        except IndexError:
+            return None
+
     return {
         "patient_id": patient_id,
         "risk": risk,
@@ -245,7 +265,13 @@ def get_patient(patient_id: str):
                 "diastolic": v[5],
                 "temp": v[6],
                 "etco2": v[7],
-                "risk_score": v[8]
+                "risk_score": v[8],
+                "gcs": _val(v, 9),
+                "bun": _val(v, 10),
+                "creatinine": _val(v, 11),
+                "wbc": _val(v, 12),
+                "platelets": _val(v, 13),
+                "glucose": _val(v, 14),
             }
             for v in vitals
         ]
@@ -260,7 +286,11 @@ def get_scores():
 
 @app.get("/metrics")
 def get_metrics():
-    """Return the latest trained model metrics from ml/metrics.json."""
+    """Return deployed-model metrics with a stable schema for the dashboard.
+
+    Canonical source is ml/metrics.json (deployed ensemble). Keys are mapped
+    to the flat schema the frontend expects: auc/accuracy/precision/recall.
+    """
     metrics_path = os.path.join('ml', 'metrics.json')
     if not os.path.exists(metrics_path):
         # Try run directories
@@ -271,7 +301,13 @@ def get_metrics():
         else:
             return {"error": "No trained model metrics found"}
     with open(metrics_path) as f:
-        return json.load(f)
+        raw = json.load(f)
+    mapped = dict(raw)
+    mapped["auc"] = raw.get("fresh_holdout_auc", raw.get("val_auc", raw.get("auc")))
+    mapped["accuracy"] = raw.get("fresh_holdout_accuracy", raw.get("val_accuracy", raw.get("accuracy")))
+    mapped["recall"] = raw.get("fresh_holdout_recall", raw.get("val_recall", raw.get("recall")))
+    mapped["precision"] = raw.get("fresh_holdout_precision", raw.get("val_precision", raw.get("precision")))
+    return mapped
 
 
 @app.get("/patient/{patient_id}/explain")
@@ -330,8 +366,21 @@ def explain_patient(patient_id: str):
 def start_training(config: TrainingConfig):
     """Start a new training job with the provided configuration."""
     config_dict = config.dict()
+    # Enforce the deployment contract: only the 12-feature / 90-min / h96
+    # config may be promoted to serving; anything else trains in isolation.
+    from backend.inference import FEATURES as SERVING_FEATURES
+    if (sorted(config_dict.get("vital_features", [])) != sorted(SERVING_FEATURES)
+            or int(config_dict.get("window", 90)) != 90
+            or int(config_dict.get("hidden_size", 96)) != 96):
+        config_dict["_promotable"] = False
+    else:
+        config_dict["_promotable"] = True
     job = training_manager.create_job(config_dict)
-    training_manager.start_training(job.job_id)
+    if not training_manager.start_training(job.job_id):
+        raise HTTPException(
+            status_code=409,
+            detail="Another training job is already running. Only one job at a time is supported.",
+        )
     return {
         "job_id": job.job_id,
         "status": job.status,

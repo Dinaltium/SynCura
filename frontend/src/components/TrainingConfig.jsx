@@ -13,7 +13,8 @@ export default function TrainingConfig() {
     batch_size: 32,
     learning_rate: 0.001,
     max_patients: 100,
-    vital_features: ['HR', 'RespRate', 'Temp', 'NISysABP', 'NIDiasABP']
+    vital_features: ['HR', 'RespRate', 'Temp', 'NISysABP', 'NIDiasABP', 'SpO2',
+                     'GCS', 'BUN', 'Creatinine', 'WBC', 'Platelets', 'Glucose']
   });
 
   const handleInputChange = (e) => {

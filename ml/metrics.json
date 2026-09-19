@@ -31,9 +31,12 @@
   "val_auc": 0.8401,
   "val_accuracy": 0.7384,
   "val_recall": 0.816,
+  "val_precision": 0.3566,
   "holdout_auc": null,
-  "holdout_note": "full set-b holdout N/A (c93 member trained on 80pct of set-b); see fresh_holdout_auc for the honest unseen-patient number",
+  "holdout_note": "full set-b holdout N/A (c93 member trained on 80pct of set-b); see fresh_holdout_auc",
   "fresh_holdout_auc": 0.8441,
   "fresh_holdout_accuracy": 0.7471,
-  "fresh_holdout_recall": 0.8066
+  "fresh_holdout_recall": 0.8066,
+  "fresh_holdout_precision": 0.3446,
+  "fresh_holdout_note": "20pct of set-b (seed 123); unseen by weights but USED during ensemble selection, not a locked final test"
 }
