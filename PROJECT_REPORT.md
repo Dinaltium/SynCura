@@ -16,7 +16,7 @@ Time-aware bidirectional attention-based LSTM (TBAL) on 176,344 ICU stays (MIMIC
 
 ### Abstract
 
-Intensive Care Unit (ICU) patient deterioration remains a leading cause of preventable in-hospital mortality. Traditional scoring systems like NEWS2 rely on static thresholds and fail to capture temporal trends in physiological data. This project presents **SynCura**, a real-time ICU monitoring system that uses an Attention-based Long Short-Term Memory (LSTM) network to predict patient deterioration risk from continuous vital sign streams. The system integrates a FastAPI backend for real-time inference, a React dashboard for clinical visualization, and SHAP-based explainability for transparent, interpretable predictions. Trained and evaluated on the PhysioNet 2012 Challenge dataset, the model uses 6 physiological features (Heart Rate, Respiratory Rate, Temperature, Systolic Blood Pressure, Diastolic Blood Pressure, and SpO2) with a 60-minute sliding window. The attention mechanism enables per-timestep interpretability, identifying which moments in a patient's trajectory most influenced the risk prediction.
+Intensive Care Unit (ICU) patient deterioration remains a leading cause of preventable in-hospital mortality. Traditional scoring systems like NEWS2 rely on static thresholds and fail to capture temporal trends in physiological data. This project presents **SynCura**, a real-time ICU monitoring system that uses an Attention-based Long Short-Term Memory (LSTM) network to predict patient deterioration risk from continuous vital sign streams. The system integrates a FastAPI backend for real-time inference, a React dashboard for clinical visualization, and SHAP-based explainability for transparent, interpretable predictions. Trained and evaluated on the PhysioNet 2012 Challenge dataset, the deployed model uses 12 features (6 vitals: Heart Rate, Respiratory Rate, Temperature, Systolic/Diastolic Blood Pressure, SpO2 + 6 labs/neuro: GCS, BUN, Creatinine, WBC, Platelets, Glucose) with a 90-minute sliding window. The target is **in-hospital mortality** (`In-hospital_death` labels; reported as mortality risk, not a validated deterioration/sepsis predictor). The attention mechanism enables per-timestep interpretability, identifying which moments in a patient's trajectory most influenced the risk prediction. Deployed: 3-model logit-averaged ensemble (hidden 96), val AUC 0.840, fresh 20%-set-B holdout AUC 0.844 (holdout used during ensemble selection, not a locked final test).
 
 ---
 
@@ -82,8 +82,9 @@ Key findings from literature:
 |  ML Pipeline      |     | SQLite DB        |
 |                   |     | (vitals.db)      |
 | AttentionLSTM     |<----|                  |
-| - 6 features      |     +------------------+
-| - 60-min window   |
+| - 12 features     |     +------------------+
+| - 90-min window   |
+| - 3-model ensemble|
 | - Attention       |     +------------------+
 | - Early Stopping  |     |  Notifications   |
 +-------------------+     | - Discord Bot    |
@@ -105,7 +106,7 @@ Key findings from literature:
 
 #### 4.2 Feature Selection
 
-6 vital signs selected based on clinical relevance and literature:
+12 features selected based on clinical relevance and literature (6 vitals + 6 labs/neuro):
 
 | Feature | PhysioNet Name | Clinical Significance |
 |---------|---------------|----------------------|
@@ -114,27 +115,33 @@ Key findings from literature:
 | Temperature | Temp | Infection/sepsis marker |
 | Systolic BP | NISysABP | Hemodynamic status |
 | Diastolic BP | NIDiasABP | Perfusion pressure |
-| SpO2 | SpO2 | Oxygenation status |
+| SpO2 | SaO2 (mapped to SpO2 slot) | Oxygenation status |
+| GCS | GCS | Consciousness |
+| BUN | BUN | Kidney waste |
+| Creatinine | Creatinine | Kidney marker |
+| WBC | WBC | Infection response |
+| Platelets | Platelets | Clotting/sepsis |
+| Glucose | Glucose | Metabolic stress |
 
 #### 4.3 Data Preprocessing
 
-1. **Sliding Window**: 60-minute windows with 1-minute stride
-2. **Interpolation**: Linear interpolation for missing values within each window
-3. **Normalization**: Z-score normalization: `(x - mean) / (std + 1e-6)`
+1. **Sliding Window**: 90-minute windows, stride 15 (eval) / 30 (training sweeps)
+2. **Interpolation**: CAUSAL per-window linear interpolation + forward/backward fill within the window only (no future leakage; checkpoints trained before this fix need retraining)
+3. **Normalization**: Population z-score from TRAIN ONLY: `(x - train_mean) / (train_std + 1e-6)`; missing filled with train mean
 4. **Padding**: Zero-padding for sequences shorter than window size
 5. **Patient-level Split**: 80/20 train/val split using GroupShuffleSplit (prevents data leakage)
 
-#### 4.4 Model Architecture: AttentionLSTMModel
+#### 4.4 Model Architecture: AttentionLSTMModel (deployed: 3-model ensemble)
 
 ```
-Input (batch, 60, 6)
+Input (batch, 90, 12)
     |
     v
-LSTM (input=6, hidden=64, layers=2, dropout=0.3)
+LSTM (input=12, hidden=96, layers=2, dropout=0.3)
     |
     v
 Attention Layer:
-  Linear(64 -> 64) -> Tanh -> Linear(64 -> 1)
+  Linear(96 -> 96) -> Tanh -> Linear(96 -> 1)
     |
     v
 Softmax over time steps
@@ -143,13 +150,13 @@ Softmax over time steps
 Weighted Sum (context vector)
     |
     v
-Dropout(0.3) -> BatchNorm1d(64)
+Dropout(0.3) -> BatchNorm1d(96)
     |
     v
-Linear(64 -> 1) -> Sigmoid
+Linear(96 -> 1) -> Logits (sigmoid at inference)
     |
     v
-Output: Risk Probability (0-1)
+Output: Mortality Risk Probability (0-1); ensemble logit-averages 3 members
 ```
 
 Key design choices:

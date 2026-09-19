@@ -300,6 +300,18 @@ h3 {
   margin-bottom: 18px;
 }
 
+.simulation-banner {
+  display: block;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #e8c547;
+  background: #fff8e1;
+  color: #5d4a00;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .summary-tile,
 .panel,
 .metric-card {

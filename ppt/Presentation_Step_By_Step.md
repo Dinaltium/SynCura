@@ -72,7 +72,7 @@ Anchors: 6 → "90 minutes in, 0–100 out, two explanations" | 7 → "interpola
 >
 > *(pause)*
 >
-> ...and we report **two** numbers. **Validation AUC: 0.840.** And more importantly — a **fresh unseen holdout (20% of set-B, never in training): AUC 0.844, 95% CI 0.836–0.852.**
+> ...and we report **two** numbers. **Validation AUC: 0.840.** And more importantly — a **fresh holdout (20% of set-B patients, never in training): AUC 0.844, 95% CI 0.836–0.852.** One honest caveat: that holdout guided our ensemble choice, so it is not a locked final test — the next step is a truly untouched multi-hospital set.
 >
 > *(pause)*
 >

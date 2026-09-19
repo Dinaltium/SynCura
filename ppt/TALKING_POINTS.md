@@ -7,7 +7,8 @@
 Attention-LSTM that reads 12 vitals/labs over 90 minutes and gives a real-time 0–100 deterioration risk **with explanations** — the papers stop at AUC, we ship the path.
 
 ## Our numbers (memorize)
-- **0.844** fresh unseen 20% set-B holdout AUC (95% CI 0.836–0.852) vs **0.840** validation → consistent, not overfit
+- **0.844** fresh 20% set-B holdout AUC (95% CI 0.836–0.852, window-level bootstrap) vs **0.840** validation → consistent, not overfit
+- Honest caveat: the holdout was unseen by weights but USED during ensemble selection — it is not a locked final test set
 - 2-layer LSTM, hidden 96, additive temporal attention, 12 features, 90-min window, stride 15
 - Ensemble of 3 LSTM models, logit-averaged
 
@@ -104,7 +105,7 @@ If asked "so what's missing?": name 2–3 and always tie back to Slide 10 upgrad
 ### 3. NOVELTY (4 marks)
 - **Q: What is novel if LSTM exists?** A: Integration novelty, not architecture novelty: temporal attention + real-time FastAPI serving + React dashboard + dual explainability (attention for when, SHAP for what) in one prototype.
 - **Q: Papers report AUC — what do you add?** A: False alarms, sensitivity/specificity/precision, lead-time estimate, NEWS2>=7 inline comparison, threshold slider, calibration path — the decision metrics clinicians need.
-- **Q: Proof against overfitting?** A: Fresh unseen 20% set-B holdout 0.844 (95% CI 0.836–0.852) consistent with validation 0.840 — no major overfit. (Full set-b N/A since c93 trained on 80% of set-b.)
+- **Q: Proof against overfitting?** A: Fresh 20% set-B holdout 0.844 (95% CI 0.836–0.852, window-level) consistent with validation 0.840 — no major overfit. Caveat: the holdout guided ensemble selection, so it is not a locked final test. (Full set-b N/A since c93 trained on 80% of set-b.)
 - **Q: Why attention + SHAP both?** A: Attention = which minutes mattered; SHAP = which features mattered. Per-patient inspectable on dashboard.
 - **Q: Why is 90-min window novel vs base?** A: Base uses full stay till discharge; we force early-warning conditions — recent window only, deployable streaming.
 

@@ -38,9 +38,9 @@ def calculate_risk_score(vitals: List[float]) -> float:
    - Write clear commit messages
    - Add comments for complex logic
 
-3. **Test locally**
-   - Run backend tests: `pytest backend/tests/`
-   - Run frontend tests: `npm test`
+3. **Test locally** (from the repo root)
+   - Run backend + ML contract tests: `.\.venv\Scripts\python.exe -m pytest backend/tests/ -q`
+   - Frontend check: `cd frontend; npm run build` (no unit-test suite yet; the build is the gate)
    - Verify the app runs without errors
 
 4. **Push and create PR**
@@ -69,15 +69,14 @@ When reviewing PRs, verify:
 
 ### Backend Tests
 ```powershell
-.\.venv\Scripts\Activate.ps1
-pip install pytest pytest-cov
-pytest backend/tests/
+.\.venv\Scripts\python.exe -m pytest backend/tests/ -q
 ```
 
 ### Frontend Tests
+No unit-test suite yet. The frontend gate is the production build:
 ```powershell
 cd frontend
-npm test
+npm run build
 ```
 
 ### Integration Testing

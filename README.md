@@ -9,7 +9,7 @@ IONERDS ASSEMBLE!!!!!!!!!!!!!!
 Project: Predictive ICU Monitoring System (software-only)
 -------------------------------------------------------
 
-This repository contains a real-time ICU patient deterioration monitoring system with attention-based deep learning. It includes:
+This repository contains a real-time ICU **in-hospital mortality-risk** research prototype with attention-based deep learning. (Labels are PhysioNet `In-hospital_death`; "deterioration risk" in the UI means mortality risk unless a separate deterioration label is defined.) It includes:
 
 - **AttentionLSTM Model**: LSTM with temporal attention, dropout, batch normalization, and early stopping
 - **FastAPI Backend**: Real-time inference, SHAP explainability, and REST API
@@ -42,7 +42,9 @@ python -m ml.train `
 
 This uses the full set-a (4,000 patients), 90-minute windows with 30-minute training stride (15-minute eval stride), proximity labeling (last 12h of each stay), population normalization, and early stopping. Metrics go to the latest `ml/training_runs/exp_*/<config>/metrics.json` (copied to `ml/metrics.json`), model to `ml/models/lstm_baseline.pt`, scaler stats to `ml/scaler.json`.
 
-**Deployed model (val AUC 0.840, fresh holdout AUC 0.844):** a 3-member logit-averaged ensemble (`s48 + c93 + s45`, all 12-feature f12-h96-w90) served from `ml/models/ensemble/*.pt` via multi-checkpoint support in `backend/inference.py`. (`c93` trained on set-a + 80% set-b, so the honest external number is the fresh unseen 20% set-b holdout.)
+**Deployed model (val AUC 0.840, fresh holdout AUC 0.844):** a 3-member logit-averaged ensemble (`s48 + c93 + s45`, all 12-feature f12-h96-w90) served from `ml/models/ensemble/*.pt` per `ml/deployed_manifest.json` (per-member scalers). (`c93` trained on set-a + 80% set-b, so full set-b evaluation is N/A; the 20% set-b holdout was unseen by weights but used during ensemble selection — not a locked final test. CI is window-level bootstrap.)
+
+> **Retraining notice:** `ml/dataset.py` now uses causal per-window interpolation (no future leakage). Checkpoints trained before this fix used whole-stay interpolation and must be retrained for comparable numbers.
 
 For a quick smoke test only (not reportable): add `--max-patients 100 --epochs 2`.
 

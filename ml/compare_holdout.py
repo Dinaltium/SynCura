@@ -24,7 +24,7 @@ OLD = {
 BASE_VAL = 0.8371
 
 
-def build_fresh_holdout():
+def build_fresh_holdout_with_ids():
     from ml.dataset import load_and_create_sequences
     from sklearn.model_selection import GroupShuffleSplit
     Xb, yb, pb = load_and_create_sequences(
@@ -37,7 +37,12 @@ def build_fresh_holdout():
     _, ho_idx = next(gss.split(np.zeros(len(upb)), np.zeros(len(upb)), groups=upb))
     ho_patients = set(upb[ho_idx])
     m = np.array([p in ho_patients for p in pb])
-    return Xb[m], yb[m]
+    return Xb[m], yb[m], np.array(pb)[m]
+
+
+def build_fresh_holdout():
+    X, y, _ = build_fresh_holdout_with_ids()
+    return X, y
 
 
 def load_orig_val():

@@ -1,0 +1,38 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install backend + ML deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install -r ml/requirements.txt
+          pip install pytest httpx
+      - name: Compile check
+        run: python -m compileall -q backend ml scripts discordbot chatbot-tele
+      - name: Backend + ML contract tests
+        run: python -m pytest backend/tests/ -q
+
+  frontend:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install + production build
+        run: |
+          cd frontend
+          npm ci
+          npm run build

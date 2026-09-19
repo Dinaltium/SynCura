@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import mimicDemoPatients from './mimicDemoPatients.json'
+import { API_URL } from './api'
 
 export const BASE_PATIENTS = [
   {
@@ -245,7 +246,7 @@ export function SimulationProvider({ children }) {
               Temp: patient.vitals.Temp,
             }
             
-            fetch('http://127.0.0.1:8000/ingest', {
+            fetch(`${API_URL}/ingest`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(vital),

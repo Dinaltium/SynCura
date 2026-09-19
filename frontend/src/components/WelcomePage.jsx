@@ -176,8 +176,8 @@ export default function WelcomePage() {
                 <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               <div>
-                <div className="accuracy-label">Model Accuracy</div>
-                <div className="accuracy-value">96.2%</div>
+                <div className="accuracy-label">Holdout AUC (research prototype)</div>
+                <div className="accuracy-value">84.4%</div>
               </div>
             </div>
           </div>
@@ -215,8 +215,8 @@ export default function WelcomePage() {
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor" />
               </svg>
             </div>
-            <h3>92.7% Accuracy</h3>
-            <p>State-of-the-art model performance on critical outcome prediction</p>
+            <h3>84.4% Holdout AUC</h3>
+            <p>Research-prototype performance on unseen PhysioNet patients (val 0.840)</p>
           </div>
 
           <div className="feature-card">

@@ -272,8 +272,8 @@ All components for the ML training frontend have been successfully implemented, 
 **Error Handling:** HTTPException on backend, axios error catching on frontend
 
 ### Database Integration
-- TrainingJob metadata stored in SQLite
-- Model checkpoints saved to disk
+- TrainingJob metadata persisted to `backend/data/training_jobs.json` (NOT SQLite; vitals live in SQLite)
+- Model checkpoints saved to job-scoped paths under `ml/models/` (never overwrite serving artifacts)
 - Metrics persisted via job.to_dict()
 
 ### ML Pipeline Integration
@@ -302,7 +302,7 @@ All components for the ML training frontend have been successfully implemented, 
 
 ### Current Capabilities
 - Single backend instance: ✅ Tested
-- Multiple concurrent jobs: ✅ Supported (threading)
+- Multiple concurrent jobs: ❌ NOT supported — exactly one active training job; a second POST returns 409
 - Frontend polling: ✅ Every 2 seconds (configurable)
 - Memory usage: ✅ 2-4GB for full dataset
 
@@ -314,22 +314,22 @@ All components for the ML training frontend have been successfully implemented, 
 
 ## Deployment Readiness
 
-### Pre-Deployment Checklist
+### Pre-Deployment Checklist (research prototype — NOT production)
 - [x] All code committed to main branch
 - [x] Documentation complete
-- [x] No hardcoded secrets
-- [x] CORS properly configured
+- [x] No hardcoded secrets (Telegram token moved to env; frontend never holds webhook secrets)
+- [ ] CORS properly configured — currently `allow_origins=["*"]` (dev only)
 - [x] Error handling comprehensive
 - [x] Logging in place
-- [x] Dependencies documented
+- [ ] Dependencies pinned (pending)
 - [x] Installation instructions clear
 
 ### Environment Configuration
 - [x] .env.example template exists
 - [x] BACKEND_PORT configurable
-- [x] VITE_API_URL configurable
-- [x] DATABASE_URL configurable
-- [x] MODEL_PATH configurable
+- [x] VITE_API_URL configurable (single client: `frontend/src/api.js`)
+- [ ] DATABASE_URL configurable — NOT read by `backend/db.py` (uses `backend/data/vitals.db`)
+- [x] MODEL_PATH configurable (plus `ml/deployed_manifest.json` for the ensemble)
 
 ## Known Limitations & Future Work
 

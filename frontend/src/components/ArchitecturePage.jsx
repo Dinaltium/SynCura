@@ -33,16 +33,16 @@ export default function ArchitecturePage({ embedded = false }) {
         </div>
         <div className="arch-hero-stats">
           <div className="stat-item">
-            <span className="stat-number">96.2%</span>
-            <span className="stat-label">AUC-ROC</span>
+            <span className="stat-number">84.4%</span>
+            <span className="stat-label">Holdout AUC (research)</span>
           </div>
           <div className="stat-item">
-            <span className="stat-number">100k+</span>
-            <span className="stat-label">Patient Hours</span>
+            <span className="stat-number">8,000</span>
+            <span className="stat-label">PhysioNet patients</span>
           </div>
           <div className="stat-item">
-            <span className="stat-number">&lt;1s</span>
-            <span className="stat-label">Latency</span>
+            <span className="stat-number">CPU</span>
+            <span className="stat-label">Real-time inference</span>
           </div>
         </div>
       </section>
@@ -121,7 +121,7 @@ export default function ArchitecturePage({ embedded = false }) {
       <section className="arch-section">
         <div className="section-header">
           <h2>🛠️ Technology Stack</h2>
-          <p className="section-desc">Modern, scalable, and production-ready technologies</p>
+          <p className="section-desc">Research-prototype stack for demonstration and evaluation</p>
         </div>
         <div className="tech-stack-grid">
           <div className={`tech-card expandable ${expandedSections.backend ? 'expanded' : ''}`}>
@@ -194,7 +194,7 @@ export default function ArchitecturePage({ embedded = false }) {
                 </div>
                 <div className="tech-item">
                   <span className="tech-name">PhysioNet</span>
-                  <span className="tech-role">100k+ patient-hour datasets</span>
+                  <span className="tech-role">8,000-patient PhysioNet 2012 dataset</span>
                 </div>
                 <div className="tech-item">
                   <span className="tech-name">SHAP</span>
@@ -238,32 +238,32 @@ export default function ArchitecturePage({ embedded = false }) {
       <section className="arch-section">
         <div className="section-header">
           <h2>📈 Model Performance Metrics</h2>
-          <p className="section-desc">Validated on PhysioNet ICU dataset with 100k+ patient-hours</p>
+          <p className="section-desc">Evaluated on PhysioNet 2012 (8,000 patients; val AUC 0.840, holdout AUC 0.844)</p>
         </div>
         <div className="metrics-showcase">
           <div className="metric-box metric-primary">
             <div className="metric-icon">🎯</div>
-            <div className="metric-value">96.2%</div>
-            <div className="metric-name">AUC-ROC Score</div>
-            <div className="metric-bar"><div style={{width: '96.2%'}}></div></div>
+            <div className="metric-value">84.4%</div>
+            <div className="metric-name">Holdout AUC (95% CI 0.836–0.852)</div>
+            <div className="metric-bar"><div style={{width: '84.4%'}}></div></div>
           </div>
           <div className="metric-box">
             <div className="metric-icon">✅</div>
-            <div className="metric-value">92.7%</div>
-            <div className="metric-name">Accuracy</div>
-            <div className="metric-bar"><div style={{width: '92.7%'}}></div></div>
+            <div className="metric-value">74.7%</div>
+            <div className="metric-name">Holdout Accuracy</div>
+            <div className="metric-bar"><div style={{width: '74.7%'}}></div></div>
           </div>
           <div className="metric-box">
             <div className="metric-icon">🎪</div>
-            <div className="metric-value">82.8%</div>
-            <div className="metric-name">Precision</div>
-            <div className="metric-bar"><div style={{width: '82.8%'}}></div></div>
+            <div className="metric-value">34.5%</div>
+            <div className="metric-name">Holdout Precision</div>
+            <div className="metric-bar"><div style={{width: '34.5%'}}></div></div>
           </div>
           <div className="metric-box">
             <div className="metric-icon">🔔</div>
-            <div className="metric-value">54.9%</div>
-            <div className="metric-name">Recall</div>
-            <div className="metric-bar"><div style={{width: '54.9%'}}></div></div>
+            <div className="metric-value">80.7%</div>
+            <div className="metric-name">Holdout Recall</div>
+            <div className="metric-bar"><div style={{width: '80.7%'}}></div></div>
           </div>
         </div>
       </section>
@@ -285,7 +285,7 @@ export default function ArchitecturePage({ embedded = false }) {
             <div className="feature-number">02</div>
             <div className="feature-icon">🤖</div>
             <h3>AI-Powered Predictions</h3>
-            <p>LSTM networks trained on 100k+ patient-hours from PhysioNet ICU datasets</p>
+            <p>LSTM ensemble trained on PhysioNet 2012 ICU data (research prototype)</p>
           </div>
           <div className="feature-card">
             <div className="feature-number">03</div>
@@ -302,8 +302,8 @@ export default function ArchitecturePage({ embedded = false }) {
           <div className="feature-card">
             <div className="feature-number">05</div>
             <div className="feature-icon">🔐</div>
-            <h3>Healthcare-Grade Security</h3>
-            <p>HIPAA-ready design with encryption and comprehensive audit logging</p>
+            <h3>Research-Prototype Security</h3>
+            <p>Local demo only: no auth, no encryption, no audit logging — not HIPAA-ready</p>
           </div>
           <div className="feature-card">
             <div className="feature-number">06</div>

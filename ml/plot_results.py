@@ -19,8 +19,38 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from ml.compare_holdout import load_orig_val, build_fresh_holdout, FEATURES_12
+from ml.compare_holdout import load_orig_val, build_fresh_holdout_with_ids, FEATURES_12
 from ml.train_lstm import AttentionLSTMModel
+
+
+def brier_score(y, p):
+    return float(np.mean((np.asarray(p) - np.asarray(y)) ** 2))
+
+
+def expected_calibration_error(y, p, n_bins=10):
+    y = np.asarray(y)
+    p = np.asarray(p)
+    edges = np.linspace(0.0, 1.0, n_bins + 1)
+    ece = 0.0
+    for b in range(n_bins):
+        m = (p > edges[b]) & (p <= edges[b + 1] if b < n_bins - 1 else p <= edges[b + 1])
+        if m.sum() > 0:
+            ece += (m.sum() / len(p)) * abs(p[m].mean() - y[m].mean())
+    return float(ece)
+
+
+def patient_level_auc(y, p, pids):
+    """One score per patient (max window probability); windows are correlated
+    so window-level AUC overstates the independent sample count."""
+    df = {}
+    for yi, pi, pidi in zip(y, p, pids):
+        if pidi not in df or pi > df[pidi][0]:
+            df[pidi] = (pi, yi)
+    probs = np.array([v[0] for v in df.values()])
+    labels = np.array([v[1] for v in df.values()])
+    if len(np.unique(labels)) < 2:
+        return None, len(df)
+    return float(roc_auc_score(labels, probs)), len(df)
 
 BASE = r"C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0"
 ENS = {
@@ -78,8 +108,8 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("loading data...", flush=True)
     Xva, yva = load_orig_val()
-    Xho, yho = build_fresh_holdout()
-    print(f"val {Xva.shape} | fresh holdout {Xho.shape}", flush=True)
+    Xho, yho, hopids = build_fresh_holdout_with_ids()
+    print(f"val {Xva.shape} | fresh holdout {Xho.shape} ({len(np.unique(hopids))} patients)", flush=True)
 
     models = load_ensemble(device)
     pva = predict_logits(models, normalize(Xva), device)
@@ -102,6 +132,13 @@ def main():
     lo_ci, hi_ci = ci_auc(prho, yho)
     va["auc_ci"] = None
     ho["auc_ci"] = [lo_ci, hi_ci]
+    va["brier"] = brier_score(yva, prva)
+    ho["brier"] = brier_score(yho, prho)
+    va["ece"] = expected_calibration_error(yva, prva)
+    ho["ece"] = expected_calibration_error(yho, prho)
+    ho_patient_auc, ho_n_patients = patient_level_auc(yho, prho, hopids)
+    ho["patient_level_auc"] = ho_patient_auc
+    ho["patient_level_n"] = ho_n_patients
     print("VAL:", va, "\nHOLDOUT:", ho, flush=True)
 
     with open(os.path.join(OUT_DIR, "metrics.json"), "w") as f:

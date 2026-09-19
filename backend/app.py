@@ -210,7 +210,7 @@ def health():
 @app.post("/ingest")
 def ingest_vital(vital: VitalRecord):
     """Ingest a vital sign reading, compute risk score, and store."""
-    vital_dict = vital.dict(exclude_none=True)
+    vital_dict = vital.model_dump(exclude_none=True)
 
     # Compute risk score via inference engine (None = model missing/failed)
     risk_score = inference_engine.add_vital(vital_dict['patient_id'], vital_dict)
@@ -365,7 +365,7 @@ def explain_patient(patient_id: str):
 @app.post("/training/start")
 def start_training(config: TrainingConfig):
     """Start a new training job with the provided configuration."""
-    config_dict = config.dict()
+    config_dict = config.model_dump()
     # Enforce the deployment contract: only the 12-feature / 90-min / h96
     # config may be promoted to serving; anything else trains in isolation.
     from backend.inference import FEATURES as SERVING_FEATURES

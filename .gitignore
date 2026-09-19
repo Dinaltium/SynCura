@@ -46,5 +46,6 @@ ml/training_runs/**/stderr.log
 ml/training_runs/**/stdout.log
 ml/models/*.pt
 
-# Frontend build artifacts
-frontend/package-lock.json
+# Runtime data (mutable; never commit live databases or job stores)
+backend/data/vitals.db
+backend/data/training_jobs.json
