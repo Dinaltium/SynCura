@@ -2,7 +2,7 @@
 ### Predictive ICU Monitoring System Using Attention-Based LSTM with Real-Time Explainability
 **P.A. College of Engineering | Department of Computer Science & Engineering**
 **Team: Abdul Ahad Ikkeri (4PA24CS002), Fathima Reeha (4PA24CS026), Fizan Feroz (4PA24CS032)**
-**Date: 2026-09-19 | Version: 1.2 | Sources: 8 papers + PhysioNet 2012 dataset (matches `ppt/SynCura_Deck_V3_FINAL.pptx` Slide 15)**
+**Date: 2026-09-19 | Version: 1.3 | Sources: 8 papers + PhysioNet 2012 dataset (matches `ppt/SynCura_Deck_V3_FINAL.pptx` Slide 15)**
 
 ## 1. Objective of this Review
 
@@ -23,13 +23,13 @@ The comparative summary is given as Table 1 in Section 2. Detailed per-study not
 | No. | Study (Authors + Title) | What SynCura Used / Adopted | Key Findings | Limitations |
 |---|---|---|---|---|
 | [1] Base | Zheng, Luo, Zhu, Du, Lan, Zhou, Yang & Huang (2025) - "Development and Validation of a Dynamic Real-Time Risk Prediction Model for ICU Patients Based on Longitudinal Irregular Data" (JMIR 27:e69293) | **Main architecture and task template.** Adapted TBAL idea as 2-layer LSTM-96 + additive temporal attention; real-time rolling-window risk formulation; stricter 90-min past-only windows with no future information; attention weights for temporal explanation. | - Gives hourly ICU risk scores that update as new data arrives<br>- Scored 0.936 on home-hospital data and 0.919 on outside hospitals<br>- Correctly flagged about 8 in 10 high-risk patients (recall 79.1%)<br>- Shows which past hours mattered most for each prediction | - Tested on old records, not live bedside use<br>- Looks best near discharge, when the outcome is already clear<br>- Accuracy falls on other hospitals (about 0.81/0.76)<br>- Uses richer records than a bedside monitor would have |
-| [2] | Wang, Bai & Jin (2026) - "Explainable Deep-Learning Models for Predicting ICU Patient Outcome" (Frontiers in Physiology 17) | **Explainability justification.** Used to support combining temporal attention with SHAP feature importance; SynCura reports both attention weights and SHAP values instead of AUC alone. | - Explains predictions with per-feature reasons<br>- Scored AUC 0.79-0.87 on ICU outcomes<br>- Built for clinician review, not just a single number | - Tested on one dataset only<br>- Explanations describe the model, not proven causes<br>- Little data on false alarms or bedside use |
-| [3] | Yan, Wang, Xu, Guo, Chang & He (2026) - "Deep Learning-Based In-Hospital Mortality Prediction Using Long-Term Sequential Data in ICU Patients" (PeerJ 14:e21631) | **Realistic benchmark and evaluation discipline.** Set LSTM as the appropriate baseline against newer architectures; adopted separate unseen-patient/hospital evaluation principle, reflected in SynCura's fresh unseen 20% set-B holdout. | - Compared 5 model types; plain LSTM won with AUC 0.802<br>- Newer Transformer models did not beat it<br>- Scores dropped on outside hospitals' data | - Overall accuracy is modest<br>- Fancier combined models add complexity for small gains<br>- No live deployment or alarm testing |
-| [4] | Sadanandan (2026) - "Multimodal Deep Learning for Early Prediction of Patient Deterioration in the ICU: Integrating Time-Series EHR Data with Clinical Notes" (arXiv:2603.14719) | **Scope control + future work.** Used the 0.70-0.85 field range to justify SynCura's realistic target for a vitals-plus-labs system; deliberately deferred clinical-note fusion to future work to keep real-time latency low. | - Combined vital-sign trends with doctors' notes<br>- Scored AUROC 0.786<br>- Survey of 31 studies: vitals-only systems typically score 0.70-0.85 | - Notes add data, privacy, compute, and delay costs<br>- Very few alarms would be true emergencies<br>- Not tested live at the bedside |
-| [5] | Wu et al. (2024) - "Revisiting the Potential Value of Vital Signs in the Real-Time Prediction of Mortality Risk in ICU Patients" (J. Big Data 11:40) | **Upper-bound reference for vitals modelling.** Used as evidence that HR, RR, Temp, BP, and oxygenation support real-time risk scoring; SynCura keeps the same core vitals and adds labs, attention, SHAP, and a deployable serving path. | - Small vital-sign set alone predicted risk well (AUC 0.926)<br>- Beat standard statistical methods<br>- Also tested on a second independent hospital | - Different patients and methods from ours, so not directly comparable<br>- Little explanation of individual predictions<br>- No deployment study |
-| [6] | Xie et al. (2025) - "Unlocking the Potential of Real-Time ICU Mortality Prediction: Redefining Risk Assessment with Continuous Data Recovery" (npj Digital Medicine 8:733) | **Missing-data roadmap.** Did not copy the generative model; used it to define SynCura's next step beyond current interpolation/forward-fill plus train-only z-score: robust RealMIP-style recovery and cross-hospital validation. | - Fills in missing measurements as they stream in<br>- Scored 0.957-0.968 across several hospital databases<br>- Worked across different hospital systems | - Needs data from many hospitals to train<br>- Heavier model than our prototype can run now<br>- Not tested in our hospital setting |
-| [7] | Choi et al. (2020) - "Deep Interpretable Early Warning System for the Detection of Clinical Deterioration" (IEEE J-BHI 24(9)) | **Early-warning + baseline comparison pattern.** Adopted attention-based early-warning design and the requirement to benchmark against NEWS2 with sensitivity, specificity, precision, false alarms, and lead time. | - Gives early warnings that beat the NEWS2 score<br>- Scored AUROC about 0.880<br>- Shows reasons behind each warning | - Tested on old hospital records<br>- Highlighted signals may not be true causes<br>- Little analysis of false alarms or daily workflow fit |
-| [8] | Scheid et al. (2025) - "Development and Validation of a Clinical Wearable Deep Learning Based Continuous In-Hospital Deterioration Prediction Model" (Nature Communications 16:9513) | **Streaming/edge justification and caution.** Used to support SynCura's SENSE -> INGEST -> SCORE -> ACT path (ESP32 + MAX30105, FastAPI/SQLite, AttentionLSTM 0-100, dashboard + alerts) while explicitly noting sensor and deployment limits. | - Wearable sensors monitored patients continuously<br>- Scored AUROC about 0.89 with early advance warning<br>- Catches decline hours earlier in its setting | - Sensors are noisy and drop out<br>- Measurements arrive irregularly<br>- Hospital device setup and workflow issues unsolved |
+| [2] | Choi et al. (2020) - "Deep Interpretable Early Warning System for the Detection of Clinical Deterioration" (IEEE J-BHI 24(9)) | **Early-warning + baseline comparison pattern.** Adopted attention-based early-warning design and the requirement to benchmark against NEWS2 with sensitivity, specificity, precision, false alarms, and lead time. | - Gives early warnings that beat the NEWS2 score<br>- Scored AUROC about 0.880<br>- Shows reasons behind each warning | - Tested on old hospital records<br>- Highlighted signals may not be true causes<br>- Little analysis of false alarms or daily workflow fit |
+| [3] | Wu et al. (2024) - "Revisiting the Potential Value of Vital Signs in the Real-Time Prediction of Mortality Risk in ICU Patients" (J. Big Data 11:40) | **Upper-bound reference for vitals modelling.** Used as evidence that HR, RR, Temp, BP, and oxygenation support real-time risk scoring; SynCura keeps the same core vitals and adds labs, attention, SHAP, and a deployable serving path. | - Small vital-sign set alone predicted risk well (AUC 0.926)<br>- Beat standard statistical methods<br>- Also tested on a second independent hospital | - Different patients and methods from ours, so not directly comparable<br>- Little explanation of individual predictions<br>- No deployment study |
+| [4] | Scheid et al. (2025) - "Development and Validation of a Clinical Wearable Deep Learning Based Continuous In-Hospital Deterioration Prediction Model" (Nature Communications 16:9513) | **Streaming/edge justification and caution.** Used to support SynCura's SENSE -> INGEST -> SCORE -> ACT path (ESP32 + MAX30105, FastAPI/SQLite, AttentionLSTM 0-100, dashboard + alerts) while explicitly noting sensor and deployment limits. | - Wearable sensors monitored patients continuously<br>- Scored AUROC about 0.89 with early advance warning<br>- Catches decline hours earlier in its setting | - Sensors are noisy and drop out<br>- Measurements arrive irregularly<br>- Hospital device setup and workflow issues unsolved |
+| [5] | Xie et al. (2025) - "Unlocking the Potential of Real-Time ICU Mortality Prediction: Redefining Risk Assessment with Continuous Data Recovery" (npj Digital Medicine 8:733) | **Missing-data roadmap.** Did not copy the generative model; used it to define SynCura's next step beyond current interpolation/forward-fill plus train-only z-score: robust RealMIP-style recovery and cross-hospital validation. | - Fills in missing measurements as they stream in<br>- Scored 0.957-0.968 across several hospital databases<br>- Worked across different hospital systems | - Needs data from many hospitals to train<br>- Heavier model than our prototype can run now<br>- Not tested in our hospital setting |
+| [6] | Sadanandan (2026) - "Multimodal Deep Learning for Early Prediction of Patient Deterioration in the ICU: Integrating Time-Series EHR Data with Clinical Notes" (arXiv:2603.14719) | **Scope control + future work.** Used the 0.70-0.85 field range to justify SynCura's realistic target for a vitals-plus-labs system; deliberately deferred clinical-note fusion to future work to keep real-time latency low. | - Combined vital-sign trends with doctors' notes<br>- Scored AUROC 0.786<br>- Survey of 31 studies: vitals-only systems typically score 0.70-0.85 | - Notes add data, privacy, compute, and delay costs<br>- Very few alarms would be true emergencies<br>- Not tested live at the bedside |
+| [7] | Wang, Bai & Jin (2026) - "Explainable Deep-Learning Models for Predicting ICU Patient Outcome" (Frontiers in Physiology 17) | **Explainability justification.** Used to support combining temporal attention with SHAP feature importance; SynCura reports both attention weights and SHAP values instead of AUC alone. | - Explains predictions with per-feature reasons<br>- Scored AUC 0.79-0.87 on ICU outcomes<br>- Built for clinician review, not just a single number | - Tested on one dataset only<br>- Explanations describe the model, not proven causes<br>- Little data on false alarms or bedside use |
+| [8] | Yan, Wang, Xu, Guo, Chang & He (2026) - "Deep Learning-Based In-Hospital Mortality Prediction Using Long-Term Sequential Data in ICU Patients" (PeerJ 14:e21631) | **Realistic benchmark and evaluation discipline.** Set LSTM as the appropriate baseline against newer architectures; adopted separate unseen-patient/hospital evaluation principle, reflected in SynCura's fresh unseen 20% set-B holdout. | - Compared 5 model types; plain LSTM won with AUC 0.802<br>- Newer Transformer models did not beat it<br>- Scores dropped on outside hospitals' data | - Overall accuracy is modest<br>- Fancier combined models add complexity for small gains<br>- No live deployment or alarm testing |
 | [9] | PhysioNet - "Computing in Cardiology Challenge 2012" (physionet.org/content/challenge-2012) | **Training and evaluation dataset.** Used for all SynCura modelling: 12 vitals + labs, 90-min rolling windows (stride 15), train-only normalisation, patient-level split, validation plus fresh unseen 20% set-B holdout (val AUC 0.840, holdout AUC 0.844). | - 4,000 ICU patients with 48 hours of measurements each<br>- Standard public testbed for ICU mortality models<br>- Includes survival/death labels for every patient | - US-only data from 2012 care patterns<br>- Many gaps and uneven measurements<br>- May not reflect our patients or modern devices |
 
 ## 3. Detailed Review (companion to Table 1)
@@ -44,57 +44,7 @@ The comparative summary is given as Table 1 in Section 2. Detailed per-study not
 
 **What SynCura used.** Architecture-task match (attention-LSTM for real-time ICU risk); hourly/rolling risk idea implemented as 90-minute past-only windows; temporal attention retained for per-timestep explanation; SHAP added for feature-level explanation; evaluation made stricter with an unseen holdout.
 
-### 3.2 [2] Wang, Bai & Jin (2026) - Explainable ICU models
-
-**Approach.** Explainable deep-learning (LSTM-family) models for ICU outcome prediction with built-in feature-attribution explanations.
-
-**Findings.** Explainable LSTM variants achieve competitive ICU outcome discrimination while exposing feature contributions for clinical review.
-
-**Limitations.** Explanations describe model behaviour rather than proving physiological causation; deployment metrics beyond AUC are thin.
-
-**What SynCura used.** Dual-explanation design: temporal attention answers *when* the trajectory worsened, SHAP answers *which* features moved the score; both are served through the dashboard and `/patient/{id}/explain`.
-
-### 3.3 [3] Yan et al. (2026) - Sequential architecture comparison
-
-**Approach.** Head-to-head comparison of LSTM, GRU, RNN, Transformer, Informer, and a stacked ensemble on long-term sequential ICU data with multi-centre external validation.
-
-**Findings.** Across LSTM, GRU, RNN, Transformer, Informer, and stacking, a plain LSTM remains the strongest single sequential model, but external-centre scores fall below internal scores.
-
-**Limitations.** Modest absolute AUC; stacking improves numbers at the cost of complexity and latency.
-
-**What SynCura used.** Kept a simple 2-layer LSTM-96 rather than moving prematurely to Transformers/graph models; reports validation alongside an unseen holdout instead of validation alone.
-
-### 3.4 [4] Sadanandan (2026) - Multimodal time-series + notes
-
-**Approach.** Bidirectional LSTM on physiological time-series fused with ClinicalBERT on clinical notes via cross-modal attention (74,822 MIMIC-IV stays, 5.7M hourly samples), plus a systematic review of 31 ICU deterioration studies (2015-2024).
-
-**Findings.** Adding ClinicalBERT notes to an LSTM improves context but only reaches AUROC ~0.786 in the reported setup; literature survey places vitals-only systems at AUC ~0.70-0.85.
-
-**Limitations.** Multimodal data increases preprocessing, privacy, compute, and deployment burden; low AUPRC reflects severe class imbalance.
-
-**What SynCura used.** Used the survey range to avoid overclaiming; fixed scope to structured time-series now and listed note fusion as future work after calibration, fairness, and prospective validation.
-
-### 3.5 [5] Wu et al. (2024) - Vital-sign mortality prediction
-
-**Approach.** Real-time short-window mortality prediction from systolic/diastolic BP, HR, RR, and temperature on 33,798 MIMIC-III patients with 889 independent-hospital external cases; LSTM vs random forest and Cox baselines.
-
-**Findings.** A small vital-sign set supports strong real-time mortality discrimination with an LSTM, substantially beating classical baselines.
-
-**Limitations.** Different cohort and pipeline from SynCura, so the number is a reference ceiling rather than a head-to-head target.
-
-**What SynCura used.** Core vital-sign input design; extended from vitals-only to 12 vitals + labs; added deployment, explainability, and NEWS2 comparison absent from the reference.
-
-### 3.6 [6] Xie et al. (2025) - RealMIP data recovery
-
-**Approach.** End-to-end generative framework (RealMIP) that imputes missing vitals/labs in real time while predicting mortality; trained on 188 eICU centres, validated on MIMIC-IV and SICdb.
-
-**Findings.** Generative continuous recovery of missing clinical data plus mortality prediction transfers well across eICU, MIMIC-IV, and SICdb.
-
-**Limitations.** Requires multi-database training and a heavier model than a student prototype can currently deploy and validate.
-
-**What SynCura used.** Roadmap item: replace/augment interpolation with robust missing-data recovery; pair it with eICU/MIMIC external validation before any clinical claim.
-
-### 3.7 [7] Choi et al. (2020) - Interpretable early warning
+### 3.2 [2] Choi et al. (2020) - Interpretable early warning
 
 **Approach.** Deep Interpretable Early Warning System (DEWS): bidirectional LSTM with attention for hospital deterioration monitoring, benchmarked against NEWS2.
 
@@ -104,7 +54,17 @@ The comparative summary is given as Table 1 in Section 2. Detailed per-study not
 
 **What SynCura used.** Early-warning framing; explicit NEWS2 baseline with sensitivity, specificity, precision, false-alarm count, and lead-time estimate rather than AUC alone.
 
-### 3.8 [8] Scheid et al. (2025) - Wearable continuous prediction
+### 3.3 [3] Wu et al. (2024) - Vital-sign mortality prediction
+
+**Approach.** Real-time short-window mortality prediction from systolic/diastolic BP, HR, RR, and temperature on 33,798 MIMIC-III patients with 889 independent-hospital external cases; LSTM vs random forest and Cox baselines.
+
+**Findings.** A small vital-sign set supports strong real-time mortality discrimination with an LSTM, substantially beating classical baselines.
+
+**Limitations.** Different cohort and pipeline from SynCura, so the number is a reference ceiling rather than a head-to-head target.
+
+**What SynCura used.** Core vital-sign input design; extended from vitals-only to 12 vitals + labs; added deployment, explainability, and NEWS2 comparison absent from the reference.
+
+### 3.4 [4] Scheid et al. (2025) - Wearable continuous prediction
 
 **Approach.** Clinical wearable deep-learning model for continuous in-hospital deterioration prediction from streaming vital signs across multiple hospitals.
 
@@ -113,6 +73,46 @@ The comparative summary is given as Table 1 in Section 2. Detailed per-study not
 **Limitations.** Real sensors introduce noise, dropouts, irregular sampling, and integration problems that retrospective ICU tables hide.
 
 **What SynCura used.** System architecture (sensor -> FastAPI/SQLite ingestion -> AttentionLSTM scoring -> dashboard/alerts, with HTTP and MQTT paths); retained an explicit prototype-only disclaimer because of these deployment gaps.
+
+### 3.5 [5] Xie et al. (2025) - RealMIP data recovery
+
+**Approach.** End-to-end generative framework (RealMIP) that imputes missing vitals/labs in real time while predicting mortality; trained on 188 eICU centres, validated on MIMIC-IV and SICdb.
+
+**Findings.** Generative continuous recovery of missing clinical data plus mortality prediction transfers well across eICU, MIMIC-IV, and SICdb.
+
+**Limitations.** Requires multi-database training and a heavier model than a student prototype can currently deploy and validate.
+
+**What SynCura used.** Roadmap item: replace/augment interpolation with robust missing-data recovery; pair it with eICU/MIMIC external validation before any clinical claim.
+
+### 3.6 [6] Sadanandan (2026) - Multimodal time-series + notes
+
+**Approach.** Bidirectional LSTM on physiological time-series fused with ClinicalBERT on clinical notes via cross-modal attention (74,822 MIMIC-IV stays, 5.7M hourly samples), plus a systematic review of 31 ICU deterioration studies (2015-2024).
+
+**Findings.** Adding ClinicalBERT notes to an LSTM improves context but only reaches AUROC ~0.786 in the reported setup; literature survey places vitals-only systems at AUC ~0.70-0.85.
+
+**Limitations.** Multimodal data increases preprocessing, privacy, compute, and deployment burden; low AUPRC reflects severe class imbalance.
+
+**What SynCura used.** Used the survey range to avoid overclaiming; fixed scope to structured time-series now and listed note fusion as future work after calibration, fairness, and prospective validation.
+
+### 3.7 [7] Wang, Bai & Jin (2026) - Explainable ICU models
+
+**Approach.** Explainable deep-learning (LSTM-family) models for ICU outcome prediction with built-in feature-attribution explanations.
+
+**Findings.** Explainable LSTM variants achieve competitive ICU outcome discrimination while exposing feature contributions for clinical review.
+
+**Limitations.** Explanations describe model behaviour rather than proving physiological causation; deployment metrics beyond AUC are thin.
+
+**What SynCura used.** Dual-explanation design: temporal attention answers *when* the trajectory worsened, SHAP answers *which* features moved the score; both are served through the dashboard and `/patient/{id}/explain`.
+
+### 3.8 [8] Yan et al. (2026) - Sequential architecture comparison
+
+**Approach.** Head-to-head comparison of LSTM, GRU, RNN, Transformer, Informer, and a stacked ensemble on long-term sequential ICU data with multi-centre external validation.
+
+**Findings.** Across LSTM, GRU, RNN, Transformer, Informer, and stacking, a plain LSTM remains the strongest single sequential model, but external-centre scores fall below internal scores.
+
+**Limitations.** Modest absolute AUC; stacking improves numbers at the cost of complexity and latency.
+
+**What SynCura used.** Kept a simple 2-layer LSTM-96 rather than moving prematurely to Transformers/graph models; reports validation alongside an unseen holdout instead of validation alone.
 
 ### 3.9 [9] PhysioNet Challenge 2012 - Dataset
 
@@ -159,20 +159,20 @@ SynCura addresses this narrower integration gap with:
 
 [1] Z. Zheng et al., Development and Validation of a Dynamic Real-Time Risk Prediction Model for ICU Patients Based on Longitudinal Irregular Data: Multicenter Retrospective Study, JMIR 27:e69293, 2025. https://doi.org/10.2196/69293
 
-[2] Y. Wang, Y. Bai, and G. Jin, Explainable Deep-Learning Models for Predicting ICU Patient Outcome, Frontiers in Physiology 17, 2026.
+[2] E. Choi et al., Deep Interpretable Early Warning System for the Detection of Clinical Deterioration, IEEE J-BHI 24(9), 2020.
 
-[3] Z. Yan et al., Deep Learning-Based In-Hospital Mortality Prediction Using Long-Term Sequential Data in ICU Patients: Multi-Center Validation Study, PeerJ 14:e21631, 2026. https://doi.org/10.7717/peerj.21631
+[3] Y. Wu et al., Revisiting the Potential Value of Vital Signs in the Real-Time Prediction of Mortality Risk in ICU Patients, J. Big Data 11:40, 2024. https://doi.org/10.1186/s40537-024-00896-8
 
-[4] B. Sadanandan, Multimodal Deep Learning for Early Prediction of Patient Deterioration in the ICU: Integrating Time-Series EHR Data with Clinical Notes, arXiv:2603.14719, 2026. https://arxiv.org/abs/2603.14719
+[4] M. R. Scheid et al., Development and Validation of a Clinical Wearable Deep Learning Based Continuous In-Hospital Deterioration Prediction Model, Nature Communications 16:9513, 2025.
 
-[5] Y. Wu et al., Revisiting the Potential Value of Vital Signs in the Real-Time Prediction of Mortality Risk in ICU Patients, J. Big Data 11:40, 2024. https://doi.org/10.1186/s40537-024-00896-8
+[5] P. Xie et al., Unlocking the Potential of Real-Time ICU Mortality Prediction: Redefining Risk Assessment with Continuous Data Recovery, npj Digital Medicine 8:733, 2025. https://doi.org/10.1038/s41746-025-02114-y
 
-[6] P. Xie et al., Unlocking the Potential of Real-Time ICU Mortality Prediction: Redefining Risk Assessment with Continuous Data Recovery, npj Digital Medicine 8:733, 2025. https://doi.org/10.1038/s41746-025-02114-y
+[6] B. Sadanandan, Multimodal Deep Learning for Early Prediction of Patient Deterioration in the ICU: Integrating Time-Series EHR Data with Clinical Notes, arXiv:2603.14719, 2026. https://arxiv.org/abs/2603.14719
 
-[7] E. Choi et al., Deep Interpretable Early Warning System for the Detection of Clinical Deterioration, IEEE J-BHI 24(9), 2020.
+[7] Y. Wang, Y. Bai, and G. Jin, Explainable Deep-Learning Models for Predicting ICU Patient Outcome, Frontiers in Physiology 17, 2026.
 
-[8] M. R. Scheid et al., Development and Validation of a Clinical Wearable Deep Learning Based Continuous In-Hospital Deterioration Prediction Model, Nature Communications 16:9513, 2025.
+[8] Z. Yan et al., Deep Learning-Based In-Hospital Mortality Prediction Using Long-Term Sequential Data in ICU Patients: Multi-Center Validation Study, PeerJ 14:e21631, 2026. https://doi.org/10.7717/peerj.21631
 
 [9] PhysioNet, Computing in Cardiology Challenge 2012, https://physionet.org/content/challenge-2012/
 
-*Consistency check (2026-09-18): reference list matches `ppt/SynCura_Deck_V3_FINAL.pptx` Slide 15; SynCura results match `ppt/figs/metrics.json` (val AUC 0.840, holdout AUC 0.844, 95% CI 0.836-0.852); table covers all 9 deck sources with findings, limitations, and adoption notes.*
+*Consistency check (2026-09-18): reference list matches `ppt/SynCura_Deck_V3_FINAL.pptx` Slide 15; SynCura results match `ppt/figs/metrics.json` (val AUC 0.840, holdout AUC 0.844, 95% CI 0.836-0.852); table covers all 9 deck sources with adoption notes, findings, and limitations, ordered chronologically with the base paper first and the dataset last (v1.3).*
