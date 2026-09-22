@@ -1,38 +1,104 @@
-# ionerdstechfusion
+# SynCura — Predictive ICU Monitoring System
 
-IONERDS ASSEMBLE!!!!!!!!!!!!!!
+> Real-time ICU **in-hospital mortality-risk** research prototype using an attention-based LSTM, served through a FastAPI backend and a React dashboard with SHAP + temporal-attention explainability.
+> (Labels are PhysioNet `In-hospital_death`; "deterioration risk" in the UI means mortality risk unless a separate deterioration label is defined.)
 
-## INFORMATION
+![Python](https://img.shields.io/badge/python-3.10-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-REST-green) ![React](https://img.shields.io/badge/React-18-61dafb) ![PyTorch](https://img.shields.io/badge/PyTorch-LSTM-orange) ![Status](https://img.shields.io/badge/status-research%20prototype-yellow)
 
-- FAILURE NOT ACCEPTED
+## Results (deployed model)
 
-Project: Predictive ICU Monitoring System (software-only)
--------------------------------------------------------
+3-model logit-averaged ensemble (`s48 + c93 + s45`, 12 features, 90-min windows), per `ml/deployed_manifest.json` and `ppt/figs/metrics.json`:
 
-This repository contains a real-time ICU **in-hospital mortality-risk** research prototype with attention-based deep learning. (Labels are PhysioNet `In-hospital_death`; "deterioration risk" in the UI means mortality risk unless a separate deterioration label is defined.) It includes:
+| Split | AUC | Accuracy | Sensitivity | Specificity | Precision | F1 |
+|---|---|---|---|---|---|---|
+| Validation | **0.840** | 0.738 | 0.816 | 0.724 | 0.357 | 0.496 |
+| Fresh unseen 20% set-B holdout | **0.844** (95% CI 0.836–0.852) | 0.747 | 0.807 | 0.737 | 0.345 | 0.483 |
 
-- **AttentionLSTM Model**: LSTM with temporal attention, dropout, batch normalization, and early stopping
-- **FastAPI Backend**: Real-time inference, SHAP explainability, and REST API
-- **React Frontend**: ICU dashboard with scenario simulation, alerts, and training UI
-- **PhysioNet 2012**: Trained on ICU mortality prediction dataset with 12 features (6 vitals: HR, RespRate, Temp, SysBP, DiasBP, SpO2 + 6 labs: GCS, BUN, Creatinine, WBC, Platelets, Glucose)
+**Read these numbers honestly:**
+- `c93` trained on set-a + 80% of set-b, so full set-b evaluation is N/A; the 20% set-b holdout was unseen by weights but used during ensemble selection — not a locked final test.
+- The CI is a window-level bootstrap.
+- Repeated gating on the same validation split makes validation AUC optimistic — keep the holdout gate on every deploy decision.
+- `ml/dataset.py` uses causal per-window interpolation (no future leakage). Checkpoints trained before that fix must be retrained for comparable numbers.
 
-Status
-------
+## Architecture
 
-**Datasets:** PhysioNet 2012 Challenge downloaded at `C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\`
+```
+Patient Vitals --> [Backend /ingest] --> [SQLite DB]
+                     |
+                     v
+            [AttentionLSTM Ensemble]
+            (2-layer LSTM-96 + additive temporal attention,
+             12 features x 90 timesteps, sigmoid output)
+                     |
+                     v
+              Risk Score (0-100)
+                     |
+          +----------+----------+
+          |                     |
+     [React Dashboard]    [Discord/Telegram Alerts]
+     (SHAP + attention      (threshold-based)
+      explanations)
+```
 
-ML Training
------------
+**Model input:** 12 features × 90 timesteps (90-minute window). Training: BCEWithLogitsLoss with pos_weight, Adam (lr 1e-4, step decay), early stopping. Population stats from train split only (`ml/scaler.json`).
 
-Install dependencies and train the AttentionLSTM with early stopping:
+### Feature set (12)
+
+| # | Feature | PhysioNet field | Normal range |
+|---|---|---|---|
+| 1 | Heart Rate | HR | 60–100 bpm |
+| 2 | Respiratory Rate | RespRate | 12–20 /min |
+| 3 | Temperature | Temp | 36.1–37.2 °C |
+| 4 | Systolic BP | NISysABP | 90–140 mmHg |
+| 5 | Diastolic BP | NIDiasABP | 60–90 mmHg |
+| 6 | SpO2 (via SaO2 alias) | SaO2 | 95–100% |
+| 7 | GCS | GCS | 3–15 |
+| 8 | BUN | BUN | 6–24 mg/dL |
+| 9 | Creatinine | Creatinine | 0.6–1.2 mg/dL |
+| 10 | WBC | WBC | 4.5–11 ×10³/µL |
+| 11 | Platelets | Platelets | 150–450 ×10³/µL |
+| 12 | Glucose | Glucose | 70–140 mg/dL |
+
+A 20-feature variant was tested and scored worse — the 12-feature set stands.
+
+## Repository layout
+
+```
+PROJ/
+├── ml/               # Training + eval (train.py, dataset.py, sweep_*.py, pick_ensemble.py)
+│   ├── models/       # Weights (gitignored; ensemble served from models/ensemble/)
+│   ├── training_runs/# Timestamped run artifacts (metrics.json only)
+│   ├── deployed_manifest.json  # Deployed ensemble definition
+│   └── scaler.json   # Train-split normalization stats
+├── backend/          # FastAPI: ingest, scoring, SHAP explain, training jobs, replay
+├── frontend/         # React 18 + Vite + Tailwind dashboard
+├── ppt/              # Final deck (SynCura_Deck_V3_FINAL.pptx), figs/metrics.json, script
+├── discordbot/       # Discord alert bot
+├── chatbot-tele/     # Telegram chatbot
+├── firmware/         # IoT firmware
+├── LITERATURE_REVIEW_DOCUMENT.md  # Literature review (v1.3, chronological)
+├── PROJECT_REPORT.md # Full project report
+└── start-dev.ps1     # Launch backend + frontend together (Windows)
+```
+
+> Contributor guide for AI agents: see `AGENTS.md`.
+
+## Quickstart
+
+### 0) Prerequisites
+
+- Python 3.10, Node.js 18+, PowerShell 5.1+ (Windows)
+- PhysioNet 2012 Challenge dataset (set-a for training, set-b for holdout)
+
+### 1) Train the model
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r ml\requirements.txt
 python -m ml.train `
-  --physionet "C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0\set-a" `
-  --outcomes "C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0\Outcomes-a.txt" `
+  --physionet "<data>\set-a" `
+  --outcomes "<data>\Outcomes-a.txt" `
   --epochs 25 `
   --patience 7 `
   --stride 15 `
@@ -40,80 +106,34 @@ python -m ml.train `
   --lr 0.0003
 ```
 
-This uses the full set-a (4,000 patients), 90-minute windows with 30-minute training stride (15-minute eval stride), proximity labeling (last 12h of each stay), population normalization, and early stopping. Metrics go to the latest `ml/training_runs/exp_*/<config>/metrics.json` (copied to `ml/metrics.json`), model to `ml/models/lstm_baseline.pt`, scaler stats to `ml/scaler.json`.
+Full set-a (4,000 patients), 90-minute windows, proximity labeling (last 12h of stay), population normalization, early stopping. Metrics → `ml/training_runs/exp_*/<config>/metrics.json`; model → `ml/models/lstm_baseline.pt`; scaler → `ml/scaler.json`.
 
-**Deployed model (val AUC 0.840, fresh holdout AUC 0.844):** a 3-member logit-averaged ensemble (`s48 + c93 + s45`, all 12-feature f12-h96-w90) served from `ml/models/ensemble/*.pt` per `ml/deployed_manifest.json` (per-member scalers). (`c93` trained on set-a + 80% set-b, so full set-b evaluation is N/A; the 20% set-b holdout was unseen by weights but used during ensemble selection — not a locked final test. CI is window-level bootstrap.)
+Smoke test only (not reportable): add `--max-patients 100 --epochs 2`.
 
-> **Retraining notice:** `ml/dataset.py` now uses causal per-window interpolation (no future leakage). Checkpoints trained before this fix used whole-stay interpolation and must be retrained for comparable numbers.
-
-For a quick smoke test only (not reportable): add `--max-patients 100 --epochs 2`.
-
-This loads ~100 patients, creates 90-minute sliding windows of 12 features (6 vitals + 6 labs), normalizes, trains an AttentionLSTM with early stopping, and saves metrics to `ml/metrics.json`.
-
-Running the Full Data Pipeline
--------------------------------
-
-**Step 1: Start the backend API**
+### 2) Start the backend
 
 ```powershell
 pip install -r backend\requirements.txt
 uvicorn backend.app:app --reload --port 8000
 ```
 
-The backend will:
-- Initialize SQLite database at `backend/data/vitals.db`
-- Load the trained 3-model AttentionLSTM ensemble from `ml/models/ensemble/*.pt` (falls back to `ml/models/lstm_baseline.pt` if no ensemble dir)
-- Start listening on `http://localhost:8000`
+Loads the 3-model ensemble from `ml/models/ensemble/*.pt` (falls back to `lstm_baseline.pt`), initializes SQLite at `backend/data/vitals.db`, serves on `http://localhost:8000`.
 
-Available endpoints:
-- `GET /health` — API status
-- `POST /ingest` — Accept vital JSON: `{"patient_id":"P001", "timestamp":1000, "HR":75, "RespRate":18, ...}`
-- `GET /patients` — Return top 6 patients by risk score
-- `GET /patient/{patient_id}` — Get patient details and recent vitals
-- `GET /scores` — Get all live risk scores
-
-**Step 2: Run the data replay (in a new terminal)**
+### 3) Replay patient data (new terminal)
 
 ```powershell
 pip install pandas requests paho-mqtt
-
 python backend\replay.py `
   --mode http `
   --url http://localhost:8000/ingest `
-  --physionet "C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0\set-a" `
+  --physionet "<data>\set-a" `
   --speed 10 `
   --max-patients 5
 ```
 
-This will stream 5 patients' vitals at 10x speed into the backend. Watch the backend logs to see each vital and computed risk score.
+Streams 5 patients' vitals at 10× speed into the backend.
 
-**Step 3: Query the API (in another terminal)**
-
-```powershell
-# Get top 6 patients
-curl http://localhost:8000/patients
-
-# Get patient details
-curl http://localhost:8000/patient/132539
-
-# Get all scores
-curl http://localhost:8000/scores
-```
-
-**Expected Output:**
-```json
-{
-  "patients": [
-    {"patient_id": "132539", "risk": 65, "timestamp": 3600},
-    {"patient_id": "132540", "risk": 42, "timestamp": 3600}
-  ]
-}
-```
-
-Frontend Live Simulation
-------------------------
-
-Run the dashboard locally:
+### 4) Run the dashboard
 
 ```powershell
 cd frontend
@@ -121,118 +141,73 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173/`.
-
-Run Frontend + Backend Together (Windows)
------------------------------------------
-
-From the repository root, start both services with one command:
+Open `http://localhost:5173/`. Or start backend + frontend together from the repo root:
 
 ```powershell
 .\start-dev.ps1
 ```
 
-This opens two new PowerShell windows:
-- Backend API on `http://127.0.0.1:8000`
-- Frontend Vite app on `http://127.0.0.1:5173`
+## API reference
 
-Dashboard simulation controls (on the main page):
-- Scenario buttons: `Baseline Mix`, `Respiratory Decline`, `Septic Shock`, `Cardiac Stress`, `Recovery Trend`
-- `Pause Simulation` / `Resume Simulation`
-- `Reset to Baseline`
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | API status |
+| POST | `/ingest` | Ingest vital JSON, returns risk score |
+| GET | `/patients` | Top 6 patients by risk score |
+| GET | `/patient/{patient_id}` | Patient details + recent vitals |
+| GET | `/scores` | All live risk scores |
+| GET | `/metrics` | Latest training metrics |
+| GET | `/patient/{patient_id}/explain` | SHAP importance + attention weights |
+| POST | `/training/start` | Start a training job |
+| GET | `/training/jobs` | List training jobs |
+| GET | `/training/{job_id}` | Job status |
+| GET | `/training/{job_id}/progress` | Stream progress (NDJSON) |
 
-The simulation updates vitals and risk scores in real time and refreshes the "Updated" timestamp automatically.
+Example:
 
-Troubleshooting Frontend Startup
---------------------------------
+```powershell
+curl -X POST http://localhost:8000/ingest -H "Content-Type: application/json" `
+  -d '{"patient_id":"P001","timestamp":1000,"HR":85,"SpO2":98,"RespRate":16,"Temp":37,"NISysABP":120,"NIDiasABP":80}'
+curl http://localhost:8000/patients
+curl http://localhost:8000/patient/P001/explain
+```
 
-If the page does not load or CPU usage spikes:
+## Dashboard features
 
-1. Stop existing dev servers and restart from `frontend`:
-   ```powershell
-   npm run dev -- --host 127.0.0.1 --port 5173
-   ```
-2. Check that port 5173 is free before starting:
-   ```powershell
-   Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue
-   ```
-3. If dependencies are stale:
-   ```powershell
-   npm install
-   npm run build
-   ```
-4. Keep only one Vite dev server running at a time.
+- **Live risk board** — ranked patients, risk dial, status buckets (`Stable`, `Watch`, `High`, `Critical`), trend sparklines, update timestamps
+- **Scenario simulation** — `Baseline Mix`, `Respiratory Decline`, `Septic Shock`, `Cardiac Stress`, `Recovery Trend`, with pause/resume/reset and a shared `/simulated-data` feed tab
+- **Alerts** — live stream + counter for critical escalation, low SpO2, high RR, fever trends
+- **Explainability** — per-patient "Inspect impact": signed per-vital contributions, waveform overlay
+- **Threshold tuning** — interactive risk slider with live sensitivity / specificity / precision / false alarms, NEWS2 (≥7) baseline comparison, lead-time estimate
 
-Feature Log (Implemented)
--------------------------
+## Documents
 
-This section tracks the currently implemented product capabilities end-to-end.
+| Document | Path |
+|---|---|
+| Final presentation deck (16 slides) | `ppt/SynCura_Deck_V3_FINAL.pptx` |
+| Presentation script | `ppt/SynCura_Presentation_Script.md` |
+| Literature review (chronological, v1.3) | `LITERATURE_REVIEW_DOCUMENT.md` (+ `.docx`) |
+| Full literature survey | `LITERATURE_REVIEW.md` |
+| Project report | `PROJECT_REPORT.md` |
+| Deployment notes | `DEPLOYMENT_READY.md` |
 
-### 1) Real-time ICU dashboard simulation
-- Live patient risk board with ranked deterioration probability
-- Synthetic real-time vitals updates for each patient (HR, SpO2, RR, Temp)
-- Trend sparkline for each patient card
-- Risk dial and status buckets (`Stable`, `Watch`, `High`, `Critical`)
-- Last update timestamp shown in UI
+## Team
 
-### 2) Scenario simulation controls
-- Scenario presets:
-  - `Baseline Mix`
-  - `Respiratory Decline`
-  - `Septic Shock`
-  - `Cardiac Stress`
-  - `Recovery Trend`
-- Start/Pause simulation control
-- Reset simulation to baseline state
-- Dedicated `Simulated Data` tab for live sensor feed inspection
+P.A. College of Engineering — Department of Computer Science & Engineering:
 
-### 3) Real-time clinical alerts
-- Live alert stream panel on dashboard
-- Rule-based threshold alerts for:
-  - Critical risk escalation
-  - Low oxygen saturation (SpO2)
-  - Elevated respiratory rate
-  - High fever/infection trend
-- Active alert counter in panel header
+- Abdul Ahad Ikkeri (4PA24CS002)
+- Fathima Reeha (4PA24CS026)
+- Fizan Feroz (4PA24CS032)
 
-### 3.1) Simulated data stream tab
-- Route: `/simulated-data`
-- Sidebar navigation entry: `Simulated Data`
-- Shared simulation state with dashboard (same scenario, run/pause state, and updates)
-- Live table with per-patient:
-  - patient ID, bed, status, risk, trend
-  - HR, SpO2, respiratory rate, temperature
-  - lead signal and recent risk window values
+## Limitations (prototype disclaimer)
 
-### 4) Explainability and score impact
-- Per-patient "Inspect impact" action from risk list
-- Risk impact breakdown by vital sign:
-  - Heart Rate
-  - SpO2 Saturation
-  - Respiratory Rate
-  - Temperature
-- Signed contribution display as risk points (`+/-`)
-- Waveform explainability overlay with color-coded contributors
+- Research prototype: retrospective US ICU data (2012), no prospective trial, no fairness/subgroup analysis, no calibration report.
+- Frontend simulation is client-side and does not read back from the backend.
+- Explanations (attention/SHAP) describe model behaviour, not proven physiology.
+- Not a medical device. Do not use for clinical decisions.
 
-### 5) Clinical threshold tuning and evaluation
-- Interactive alert threshold slider (risk threshold tuning)
-- Real-time performance readouts:
-  - Sensitivity
-  - Specificity
-  - Precision
-  - False alarms
-- NEWS2 baseline comparison section (`NEWS2 >= 7`) vs AI model
-- Average early warning lead-time estimate shown in analytics
+## Troubleshooting
 
-### 6) Backend and ML capabilities in repository
-- FastAPI ingestion and patient APIs:
-  - `POST /ingest`
-  - `GET /patients`
-  - `GET /patient/{patient_id}`
-  - `GET /scores`
-- Training job lifecycle endpoints:
-  - `POST /training/start`
-  - `GET /training/jobs`
-  - `GET /training/{job_id}`
-  - `GET /training/{job_id}/progress`
-- LSTM training pipeline for PhysioNet data with run artifacts and metrics output
+- **Frontend won't load / CPU spikes:** keep one Vite server; restart with `npm run dev -- --host 127.0.0.1 --port 5173`; check port 5173 is free; `npm install; npm run build` if stale.
+- **Backend can't find model:** place ensemble weights under `ml/models/ensemble/` or a fallback at `ml/models/lstm_baseline.pt` (gitignored — add with `git add -f`).
+- **Full-data training is slow:** ~5–7 min/epoch at stride 15; use stride 30 for sweeps. Deployment uses window 90 regardless of training stride.
