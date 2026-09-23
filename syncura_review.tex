@@ -1,0 +1,320 @@
+% SynCura Review Paper - IEEE DISCOVER style - 7 page target
+% Compile on Overleaf: pdfLaTeX + IEEEtran.cls (built-in)
+\documentclass[conference]{IEEEtran}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage{newtxtext,newtxmath}
+\usepackage{caption}
+\usepackage{stfloats}
+\usepackage{array}
+\usepackage{microtype}
+\emergencystretch=1em
+\sloppy
+
+\captionsetup[table]{labelfont=bf,textfont=bf,position=top,skip=4pt,font=footnotesize}
+\captionsetup[figure]{labelfont=bf,textfont=normal,position=bottom,skip=4pt,font=footnotesize}
+
+\begin{document}
+
+\title{SynCura: Predictive ICU Monitoring with Attention-Based LSTM\\--- A Comprehensive Review of Real-Time Mortality Prediction, Explainability and Deployment}
+
+\author{\IEEEauthorblockN{Fizan Feroz\IEEEauthorrefmark{1}, Abdul Ahad Ikkeri\IEEEauthorrefmark{1}, Fathima Reeha T.A\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Department of Computer Science and Engineering,\\
+P.~A.~College of Engineering, Mangalore, India\\
+4pa24cs032@pace.edu.in, 4pa24cs002@pace.edu.in, 4pa24cs026@pace.edu.in}
+}
+
+\maketitle
+
+\begin{abstract}
+Intensive care deterioration is temporal, sparse, imbalanced and high-stakes. Scores such as NEWS2, APACHE and SAPS reduce physiology to thresholds at a time point, missing direction, duration and interaction of trends. This paper presents a comprehensive review underpinning SynCura, a predictive ICU monitoring research prototype that produces continuously updated in-hospital mortality risk from streaming-style vital signs and laboratories using a two-layer LSTM with additive temporal attention, served through FastAPI and SQLite with SHAP and attention explanations, a React dashboard and threshold-based alerts. We systematically review one base paper and eight supporting works plus the PhysioNet 2012 Challenge dataset, spanning: (a) time-aware attention LSTM for dynamic risk, (b) interpretable early warning versus NEWS2, (c) vital-sign-only real-time modelling, (d) wearable continuous prediction, (e) generative missing-data recovery, (f) multimodal time-series plus clinical notes, (g) explainable ICU outcome models, and (h) head-to-head sequential architecture comparison with external validation. Reported AUROCs range from 0.786 for note-fused models and 0.802 for plain LSTM in controlled multi-centre tests, to 0.880 for interpretable early warning, 0.926 for vitals-only LSTM, 0.936 dynamic for time-aware attention LSTM, and 0.957--0.968 for multi-database generative recovery models. SynCura deliberately trades input richness and scale for streaming deployability: 12 features $\times$ 90-minute causal windows, train-only normalisation, patient-level splits and a three-model logit-averaged ensemble achieving validation AUC 0.840 and fresh unseen 20\% set-B holdout AUC 0.844 (95\% CI 0.836--0.852). The review isolates a persistent integration gap: few studies demonstrate the full sensor-to-score-to-explanation-to-alert path with causal evaluation, calibration, lead-time, false-alarm and fairness analysis. SynCura addresses that narrow integration gap as a prototype-only system. It is not a medical device and requires prospective, external and fairness validation before any clinical use.
+\end{abstract}
+
+\begin{IEEEkeywords}
+ICU monitoring, mortality prediction, early warning, LSTM, temporal attention, SHAP, PhysioNet 2012, MIMIC, real-time clinical AI, wearable sensing, missing data.
+\end{IEEEkeywords}
+
+\section{Introduction}
+\subsection{Motivation}
+Intensive care units concentrate the sickest patients, the densest monitoring and the scarcest attention. A patient may generate hundreds of measurements per hour, yet deterioration is often recognised late, after a cascade of subtle changes in heart rate variability, respiratory rate, blood pressure, oxygenation, mentation and laboratories. Retrospective reviews repeatedly show that antecedents are present hours before arrest or unplanned ICU transfer, but are buried in noise, missingness and alarm fatigue.
+
+Static severity scores --- Acute Physiology and Chronic Health Evaluation (APACHE), Simplified Acute Physiology Score (SAPS), Sequential Organ Failure Assessment (SOFA) and National Early Warning Score 2 (NEWS2) --- remain bedside standards because they are transparent, cheap and actionable. Their weakness is representational: they threshold the present, ignoring trajectory. Two patients with identical NEWS2 can have opposite momentum, one recovering and one collapsing. Machine learning promises to model that momentum directly from time series.
+
+\subsection{Why Sequential Deep Learning}
+ICU data violate classical modelling assumptions. Sampling is irregular and asynchronous: heart rate may be recorded every minute, creatinine once per day, blood pressure only when a cuff cycles. Missingness is informative: sicker patients are measured more often. Labels are imbalanced ($\sim$14\% mortality in PhysioNet 2012) and delayed. Distributions shift across hospitals, years, devices and case-mix.
+
+Recurrent models, especially LSTM networks, handle variable-length sequences and long-range dependencies better than fixed-window logistic regression or tree ensembles on flattened features. Attention mechanisms add inspectability by weighting which past steps mattered for the current prediction, a property clinicians value even when weights are not causal. Transformers and state-space models now compete, but recent multi-centre head-to-head tests show plain LSTMs remain surprisingly strong when evaluation is strict, external and sequential.
+
+\subsection{SynCura in One Paragraph}
+SynCura is a student research prototype for predictive ICU monitoring. It replays PhysioNet-style data in rolling 90-minute past-only windows (90 timesteps $\times$ 12 features), scores mortality risk 0--100 with a 2-layer LSTM-96 plus additive temporal attention, and explains each score with temporal attention ({\em when} the trajectory worsened) and KernelSHAP values ({\em which} features pushed the score). Scores flow through FastAPI with HTTP and MQTT ingestion into SQLite, a React dashboard with risk board, waveforms, threshold tuning and NEWS2 comparison, and Discord/Telegram alerts. The deployed checkpoint is a three-model logit-averaged ensemble (s48+c93+s45) at validation AUC 0.840 and fresh unseen holdout 0.844. All claims are prototype-only.
+
+\subsection{Objectives and Selection Method}
+This review records for each source: (1) what SynCura adopted, (2) key findings in plain language, and (3) deployment limitations. Papers were selected to cover the closest architecture-task match, realistic LSTM targets, vitals-only and multimodal contrasts, missing-data and external-validation practice, and interpretable early-warning plus streaming deployment. Preference was given to works cited in the project deck so document, deck and report stay consistent. AUROCs come from different cohorts, labels, windows and splits and are reference points, not head-to-head ranks.
+
+\subsection{Organisation}
+Section II covers data foundations. Section III surveys nine sources. Section IV compares them. Section V presents SynCura as a system. Section VI evaluates performance honestly. Section VII distils findings, limits, deployment challenges and gaps. Section VIII concludes.
+
+\section{Background and Data Foundations}
+\subsection{Task Formulation}
+Let $\mathbf{X}_{1:T} \in \mathbb{R}^{T \times d}$ be $d$=12 clinical variables over $T$=90 minutes ending at time $t$, with mask $\mathbf{M}_{1:T}$ indicating observed entries. The goal is $P(y=1 \mid \mathbf{X}_{\le t})$, in-hospital mortality, updated as $t$ advances. Causality is mandatory: imputation, normalisation and features at $t$ may use only $\le t$. Patient-level splitting ensures no patient appears in both train and test. SynCura implements this with causal per-window interpolation, forward-fill within window, train-split means/stds, and stride-15 windowing in training with window-90 inference regardless of stride.
+
+The LSTM baseline follows:
+\begin{equation}
+\mathbf{h}_t, \mathbf{c}_t = \mathrm{LSTM}(\mathbf{x}_t, \mathbf{h}_{t-1}, \mathbf{c}_{t-1}), \quad e_t = \mathbf{v}^\top \tanh(\mathbf{W}\mathbf{h}_t + \mathbf{b})
+\end{equation}
+\begin{equation}
+\alpha_t = \frac{\exp(e_t)}{\sum_{k=1}^{T}\exp(e_k)}, \quad \mathbf{z} = \sum_{t}\alpha_t \mathbf{h}_t, \quad \hat{y} = \sigma(\mathbf{w}^\top \mathbf{z} + b_0)
+\end{equation}
+where $\alpha_t$ are temporal attention weights visualised on the dashboard. Training minimises BCEWithLogitsLoss with positive weighting $w_{pos}=N_{neg}/N_{pos}$, Adam with step decay, early stopping on validation AUC.
+
+\subsection{PhysioNet 2012 Challenge}
+The Computing in Cardiology Challenge 2012 provides 4,000 training stays (set-a) and 4,000 holdout stays (set-b), age $\ge$16, $\sim$37 variables over the first 48 ICU hours, with {\tt In-hospital\_death} labels. It is US, 2012-era, sparse and retrospective, but public, labelled and multivariate, enabling reproducible benchmarking. SynCura uses set-a for training/validation and 20\% of set-b as a fresh unseen holdout (full set-b N/A because one ensemble member saw 80\% of set-b during training, disclosed explicitly).
+
+Preprocessing details matter more than architecture at this scale. SynCura resamples to 1-minute grid, causally interpolates, forward-fills, substitutes train means for leading NaNs, z-scores with train stats, and labels windows by proximity (last 12h positive-weighted). A 20-feature extension (adding K, Na, HCO3, Mg, HCT, pH, PaO2, PaCO2) scored 0.787 versus 0.807 baseline and was rejected: extra sparsity hurt more than extra signal helped at this data scale.
+
+\subsection{MIMIC and eICU Context}
+MIMIC-III ($\sim$38k stays, 2001--2012), MIMIC-IV (larger, modernised) and eICU-CRD (multi-centre, 200k+ stays, 188 hospitals in recent generative work) provide scale and external validation. Cross-hospital drops of 0.05--0.15 AUROC are typical due to charting frequency, device calibration, admission thresholds and coding. Multi-database training (e.g.\ RealMIP on 188 eICU sites) recovers transfer at substantial compute, data-governance and latency cost, beyond a student prototype.
+
+\subsection{Evaluation Beyond AUROC}
+Discrimination without calibration misleads. A model with AUC 0.84 but poor calibration and 10 false alarms per bed-day will be silenced. Required operational metrics include sensitivity at fixed specificity, precision/F1 under imbalance, calibration slope/intercept and reliability diagrams, false alarms per patient-day, median lead time before death/deterioration, and subgroup performance (age, sex, LOS, diagnosis). SynCura reports the first set and visualises threshold trade-offs live; calibration, fairness and prospective evaluation remain future work.
+
+\section{Literature Survey}
+\subsection{Base Paper: Time-Aware Bidirectional Attention LSTM}
+Zheng et al. (2025, JMIR, $n$=176,344 MIMIC-IV stays, eICU external) propose TBAL: time-aware embeddings for irregular intervals plus bidirectional LSTM plus attention plus gradient attribution, emitting hourly mortality risk. Static AUROC 0.959, dynamic 0.936 internal, 0.919 external, recall 79.1\%. Time-awareness explicitly models $\Delta t$ between observations, critical when labs are daily and vitals are minutely.
+
+SynCura adopts the task template and attention idea but simplifies for streaming: uni-directional (causal) 2-layer LSTM-96, 90-minute horizon rather than full-stay bidirectional context, additive attention over 90 steps, SHAP for feature attribution instead of integrated gradients. Rationale: bidirectional context leaks future at bedside; full-stay attention is expensive per minute; SHAP integrates with the FastAPI explain endpoint.
+
+Limitations carried forward: retrospective design, near-discharge inflation (predictions close to outcome use accumulated evidence), external drop, richer EMR inputs (medications, codes) unavailable to a vital-sign service, no bedside trial.
+
+\subsection{Interpretable Early Warning vs NEWS2}
+Choi et al. (2020, IEEE J-BHI, DEWS) train bidirectional LSTM with attention for ward deterioration, benchmarking against NEWS2 on AUROC ($\sim$0.880), sensitivity, specificity, precision, false-alarm rate and lead time, with per-alert feature contributions. Their contribution is methodological as much as numerical: require operational comparison, not AUC alone.
+
+SynCura copies this discipline. The dashboard computes NEWS2 $\ge$7 on identical windows, plots sensitivity/specificity/precision/false alarms versus threshold, and estimates lead time by back-testing risk crossings before positive labels. Attention/SHAP panels mirror DEWS interpretability but served live.
+
+Limits: retrospective single-system data, correlational attributions presented without causal validation, limited alarm-burden and workflow integration analysis.
+
+\subsection{Vital-Sign-Only Real-Time Mortality}
+Wu et al. (2024, J.\ Big Data, $n$=33,798 MIMIC-III plus 889 external) restrict inputs to systolic/diastolic BP, HR, RR and temperature for short-window mortality. Plain LSTM AUC 0.926 substantially beats random forest (0.744) and Cox (miscalibrated at 0.245 in their setup). This is the cleanest evidence that a handful of vitals, modelled sequentially, support real-time risk.
+
+For SynCura this is both justification and ceiling. It justifies the core vitals choice and real-time framing. It caps expectations: 0.926 with clean MIMIC vitals and short windows is the neighbourhood a well-tuned vitals model can reach; SynCura adds seven more variables (SpO2, GCS, labs) but operates on sparser PhysioNet 2012 with stricter causality, so parity is not expected.
+
+Limits: cohort/pipeline mismatch prevents direct comparison; minimal per-prediction explanation; no deployment or latency study.
+
+\subsection{Wearable Continuous Prediction}
+Scheid et al. (2025, Nature Commun., multi-hospital wearable cohort) validate a deep model on continuous wearable vitals for in-hospital deterioration (AUROC $\sim$0.89, hours of advance warning). Unlike ICU tables, wearables stream with motion artefacts, dropouts, battery gaps and skin-tone/position bias.
+
+SynCura uses this to justify SENSE $\rightarrow$ INGEST $\rightarrow$ SCORE $\rightarrow$ ACT (ESP32 + MAX30105 photoplethysmography, FastAPI/SQLite, 0--100 score, dashboard/alerts) while explicitly labelling bedside claims prototype-only. Firmware realities --- non-uniform sampling, NaN bursts, MQTT reconnects --- are handled as engineering, not modelling, problems in the current build.
+
+Limits transferred: sensor noise, irregular sampling and workflow integration that retrospective tables hide; hospital device governance unsolved.
+
+\subsection{Generative Missing-Data Recovery}
+Xie et al. (2025, npj Digital Medicine, RealMIP) jointly learn to impute missing vitals/labs generatively in real time while predicting mortality. Trained on 188 eICU centres, validated on MIMIC-IV and SICdb, AUC 0.957--0.968 across databases, the highest in this review. The insight: principled, uncertainty-aware imputation helps more than larger classifiers on zero-filled inputs, especially with 60--80\% missingness in labs.
+
+SynCura does not copy RealMIP (too heavy, needs multi-DB training) but adopts it as roadmap: replace causal interpolation with learned recovery plus confidence, then re-validate externally. Current interpolation is transparent and fast but underestimates uncertainty during long gaps.
+
+Limits: multi-database data access, GPU training cost, inference latency and local validation burden exceed prototype scope.
+
+\subsection{Multimodal Time-Series plus Clinical Notes}
+Sadanandan (2026, arXiv, $n$=74,822 MIMIC-IV stays, 5.7M hourly samples) fuses bidirectional LSTM on physiology with ClinicalBERT on notes via cross-modal attention: AUROC 0.786, AUPRC 0.191. Its systematic review of 31 ICU deterioration studies (2015--2024) finds structured-data-only models at 0.70--0.85. Notes add context (``increasing pressor requirement'') but also preprocessing, de-identification, latency (notes lag vitals by hours) and privacy cost, with severe imbalance crushing precision.
+
+SynCura uses the 0.70--0.85 band to avoid overclaiming and defers note fusion. A vitals-plus-labs streaming system should live inside that band; exceeding it on internal validation without external confirmation likely signals leakage or overfitting.
+
+Limits: compute/privacy/delay overhead, very low precision for rare events, no live evaluation.
+
+\subsection{Explainable ICU Outcome Models}
+Wang, Bai and Jin (2026, Frontiers Physiol.) compare explainable LSTM variants (AUC 0.79--0.87) with built-in feature attribution for clinician review. Their message aligns with DEWS: build for review, not just a number --- show which features moved the score, with stability across seeds and windows.
+
+SynCura implements dual explanation: attention for {\em when} and SHAP for {\em which}, served at {\tt /patient/\{id\}/explain} with signed contributions and waveform overlays. Explanations are logged per score for audit. They are described as model-behaviour summaries; physiological causation requires separate study.
+
+Limits: single-dataset, attribution faithfulness unproven, thin alarm/workflow metrics.
+
+\subsection{Head-to-Head Sequential Comparison}
+Yan et al. (2026, PeerJ, multi-centre) compare LSTM, GRU, RNN, Transformer, Informer and stacking on long-term ICU sequences. Plain LSTM wins single-model at 0.802 (95\% CI 0.774--0.828); Transformers/Informer do not beat it; stacking helps marginally at latency cost; external scores fall below internal. This tempers enthusiasm for architectural novelty without data and evaluation scale.
+
+SynCura therefore stays on 2-layer LSTM-96, investing effort in windows, splits, imbalance handling and ensemble selection rather than chasing Transformers or graphs prematurely. Graph attention (Do et al.\ 2023) and state-space alternatives remain future work.
+
+Limits: modest absolute AUC, stacking complexity, no prospective alarm testing.
+
+\subsection{Lineage and Systems Contrasts}
+Nguyen et al.\ (2017, attention LSTM on PhysioNet 2012) is the direct ancestor: signal-level plus temporal attention on the same dataset/task, justifying SynCura's design root. Mila and Ray (2025, IEEE Sensors review of BLE/ZigBee/Wi-Fi/6LoWPAN and edge-vs-cloud) justify centralised inference (FastAPI) with edge sensing (ESP32), since deep models suit servers, not microcontrollers. Mila et al.\ (2025, MASC wearable prototype with noise-injection and non-uniform sampling tests) parallels SynCura firmware handling of real sensor irregularity versus clean retrospective training data. Do et al.\ (2023, graph attention rapid response) is the deliberate contrast: inter-variable graph attention versus temporal attention; SynCura chooses temporal for streaming simplicity.
+
+\section{Comparative Analysis}
+Table I consolidates adoption, findings and limits. Table II lists SynCura inputs. The field separates into three strata: (i) 0.78--0.85 single-dataset structured systems (realistic for SynCura scale), (ii) 0.88--0.93 single-system attention/early-warning with richer inputs, (iii) 0.93--0.97 multi-database or generative systems. Movement between strata is driven by data scale/diversity and input richness, not solely architecture.
+
+\begin{table*}[t]
+\caption{Comparative Summary of Reviewed Works and SynCura Adoption}
+\label{tab:comp}
+\centering
+\footnotesize
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.55cm}>{\raggedright\arraybackslash}p{2.7cm}>{\raggedright\arraybackslash}p{3.8cm}>{\raggedright\arraybackslash}p{4.0cm}>{\raggedright\arraybackslash}p{4.4cm}}
+\toprule
+No. & Study & What SynCura Adopted & Key Findings & Limitations \\
+\midrule
+{[1]} & Zheng 2025 TBAL JMIR & Arch-task template; LSTM-96 + attention; rolling risk; past-only 90-min & Dyn.\ 0.936 int.\ 0.919 ext.\ recall 79.1\%; hourly; time attribution & Retro; discharge inflation; ext.\ drop; rich EMR; no bedside \\
+{[2]} & Choi 2020 DEWS J-BHI & NEWS2 benchmark; sens/spec/prec/alarms/lead time & Beats NEWS2; $\sim$0.880; per-alert reasons & Retro; correlational; limited workflow \\
+{[3]} & Wu 2024 vitals JBD & Core vitals; upper bound 0.926 & Vitals LSTM beats RF/Cox; ext.\ 889 & Cohort mismatch; little explain; no deploy \\
+{[4]} & Scheid 2025 wearable NatC & SENSE-INGEST-SCORE-ACT; prototype disclaimer & Cont.\ $\sim$0.89; hours lead & Noise/dropouts; integration gaps \\
+{[5]} & Xie 2025 RealMIP npjDM & Missing-data roadmap & Generative 0.957--0.968 eICU/MIMIC/SICdb & Multi-DB; heavy; not local \\
+{[6]} & Sadanandan 2026 multi arXiv & Scope control; 0.70--0.85 band; defer notes & Fusion 0.786; survey 31 studies & Privacy/compute/delay; low PPV \\
+{[7]} & Wang 2026 explain FrontP & Dual attention+SHAP API/dashboard & 0.79--0.87 + reasons & Single DB; non-causal; thin ops metrics \\
+{[8]} & Yan 2026 LSTMvsTr PeerJ & Simple LSTM; unseen-holdout discipline & LSTM 0.802 beats Trans/GRU/RNN/Inf & Modest; stacking cost; no alarm test \\
+{[9]} & PhysioNet 2012 & All training; 12f 90-min; patient splits & 4000+4000 stays 48h public & US 2012; sparse; shift \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\section{SynCura System Perspective}
+\subsection{Serving Architecture}
+Fig.~\ref{fig:arch} shows the deployed path. SENSE replays or senses vitals using ESP32 plus MAX30105, with PhysioNet replay in demo mode. INGEST validates JSON, writes to SQLite, and publishes via MQTT with reconnect. SCORE loads the three-model ensemble in a thread-safe engine, scores 90-step windows on each ingest, and caches attention. ACT ranks patients, draws risk dials and waveforms, fires alerts on threshold crossing, and exposes metrics and explain endpoints.
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.92\columnwidth}{\centering\footnotesize SENSE (ESP32 / replay) $\rightarrow$ INGEST (FastAPI + MQTT $\rightarrow$ SQLite) $\rightarrow$ SCORE (AttentionLSTM $\times$3 logit-avg + SHAP) $\rightarrow$ ACT (Dashboard + Discord/Telegram + NEWS2)}} 
+\caption{SynCura serving path from streaming-style input to explained score and alert.}
+\label{fig:arch}
+\end{figure}
+
+\subsection{Model, Features and Training}
+Base learner: 2-layer LSTM $h$=96 dropout 0.3, additive attention, batch-norm, sigmoid. Loss BCEWithLogitsLoss with pos\_weight; Adam lr 1e-4 halved every 6 epochs, weight decay 1e-4, early stopping patience 7, batch 128. Table II lists 12 features mapped from PhysioNet fields (SpO2 via SaO2 alias). Population stats from train only.
+
+\begin{table}[htbp]
+\caption{SynCura 12-Feature Input Set}
+\label{tab:feats}
+\centering
+\footnotesize
+\begin{tabular}{rllc}
+\toprule
+\# & Feature & Field & Normal \\
+\midrule
+1 & Heart Rate & HR & 60--100 \\
+2 & Resp.\ Rate & RespRate & 12--20 \\
+3 & Temperature & Temp & 36.1--37.2 \\
+4 & Systolic BP & NISysABP & 90--140 \\
+5 & Diastolic BP & NIDiasABP & 60--90 \\
+6 & SpO2 & SaO2 & 95--100 \\
+7 & GCS & GCS & 3--15 \\
+8 & BUN & BUN & 6--24 \\
+9 & Creatinine & Creatinine & 0.6--1.2 \\
+10 & WBC & WBC & 4.5--11 \\
+11 & Platelets & Platelets & 150--450 \\
+12 & Glucose & Glucose & 70--140 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Full set-a training is $\sim$5--7 min/epoch at stride 15 ($\sim$2--3 at stride 30 for sweeps). Sweeps cover LR schedules, warm starts, seeds 41--52, feature counts and window/stride ablations. Deployment uses window 90 regardless of training stride. Rounds 8--18 progressed from 0.807 single to 0.833 full-data single to 0.837 4-model to deployed 0.840/0.844 3-model mixed ensemble, with holdout gating each promotion to limit validation overfitting.
+
+\subsection{Explainability, Thresholds and NEWS2}
+The dashboard Inspect view shows signed per-vital SHAP contributions plus 90-step attention overlays on waveforms, letting clinicians ask ``did tachycardia plus hypotension over the last 30 minutes drive this?'' A risk slider recomputes sensitivity/specificity/precision/false alarms live against NEWS2 $\ge$7, making the precision cost of high recall explicit under 14\% prevalence. Scenario simulators (respiratory decline, septic shock, cardiac stress, recovery) aid education but are client-side and not backend-scored, a documented limitation.
+
+\section{Performance Evaluation}
+\subsection{SynCura Numbers}
+Table III reports the deployed ensemble on the original stride-15 80/20 validation split (seed 42) and fresh unseen 20\% set-B holdout. Validation AUC 0.840 (acc.\ 0.738, sens 0.816, spec 0.724, prec 0.357, F1 0.496); holdout AUC 0.844, 95\% CI 0.836--0.852 (acc.\ 0.747, sens 0.807, spec 0.737, prec 0.345, F1 0.483). CI is window-level bootstrap. Repeated gating on validation makes validation optimistic; holdout gates every deploy decision.
+
+\begin{table}[htbp]
+\caption{SynCura Deployed Ensemble (s48+c93+s45)}
+\label{tab:res}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccccc}
+\toprule
+Split & AUC & Acc & Sens & Spec & Prec \\
+\midrule
+Validation & 0.840 & 0.738 & 0.816 & 0.724 & 0.357 \\
+Holdout 20\% B & 0.844 & 0.747 & 0.807 & 0.737 & 0.345 \\
+& CI 0.836--0.852 & & & & F1 0.483 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Positioning: top edge of the 0.70--0.85 vitals band, below 0.926 vitals ceiling and 0.936 TBAL, well below 0.957+ multi-DB generative ceiling. Given PhysioNet sparsity, strict causality and small team compute, this is credible and deployable rather than maximal.
+
+\subsection{Ablations and Honest Caveats}
+Feature ablation: 20 features 0.787 vs 12 features 0.807 baseline --- rejected. Stride ablation: stride-30 sweeps transfer to window-90 inference with $<$0.01 AUC loss while halving time. Seed variance across 16 seeds spans $\sim$0.03 AUC, motivating ensembling (+0.007--0.011 over best single). Preprocessing fix history: checkpoints before causal per-window interpolation must be retrained; mixing leaky and causal numbers is invalid. Full set-b holdout is N/A because c93 trained on 80\% of set-b; only the fresh 20\% is reported, and it gated selection, so it is not a locked test. No calibration, fairness or prospective results are claimed.
+
+\subsection{Operational Reading}
+At sensitivity $\sim$0.81, precision $\sim$0.35 implies roughly two false alarms per true alarm, typical for 14\% prevalence and consistent with DEWS/NEWS2 trade-offs. Without lead-time and alarm-burden measurement at the bedside, AUC alone cannot justify deployment. SynCura therefore ships threshold tuning and NEWS2 comparison as first-class UI, not appendix plots, and logs every score/explanation for silent-trial audit.
+
+\subsection{Training Progression and Reproducibility}
+Table IV summarises SynCura optimisation rounds 8--18. Early rounds isolated optimiser and schedule effects on the 1,519-patient subset. Full set-a training at stride 30 halved epoch time with minimal loss versus stride 15, enabling 16-seed sweeps. Feature ablation confirmed 12 features dominate 20 features under sparsity. Ensemble selection was greedily holdout-gated: candidates were added only if validation and fresh holdout improved, yielding the deployed three-model mix. All runs log metrics, scaler version and git hash. This mirrors Yan et al.'s external-validation principle at student scale.
+
+\begin{table}[htbp]
+\caption{SynCura Training Rounds (Summary)}
+\label{tab:rounds}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llc}
+\toprule
+Round & Focus & Val AUC \\
+\midrule
+8--10 & LR schedule, warm-start, decay & 0.807 \\
+11 & Multi-seed winner & 0.815 \\
+12--14 & Full set-a, stride 30, warm-start & 0.828 \\
+15--16 & Full-data single best + seeds & 0.833 \\
+17--18 & Ensemble 4-model then 3-model & 0.837--0.840 \\
+Deployed & s48+c93+s45 + holdout gate & 0.840/0.844 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Ethics, Fairness and Safety Framing}
+Retrospective mortality models risk entrenching disparities in age, sex, length of stay and diagnosis groups, and conflating predictable mortality with preventable deterioration. SynCura reports no subgroup or calibration results and therefore makes no fairness claim. Explanations are explicitly labelled as model behaviour, not physiological causation, to avoid automation bias. Data are US 2012 and do not represent Indian bedside populations or modern devices; de-identification, consent for prospective logging, and alert-override workflows are unresolved. The prototype is framed throughout the dashboard and API documentation as research-only, requiring locked-test evaluation, calibration audit, fairness audit and silent prospective trial before any clinical pilot, consistent with DECIDE-AI and TRIPOD-AI reporting expectations.
+
+\section{Discussion}
+\subsection{Common Findings}
+Deterioration is temporal; LSTMs remain strong baselines; attention improves inspectability; reported performance depends on data/labels/windows/splits; external validation and missing-data handling separate prototypes from systems; discrimination without calibration, lead-time and alarm analysis is insufficient.
+
+\subsection{Repeated Limitations}
+Retrospective single-system data with informative missingness; internal-to-external drops; hindsight bias near discharge; AUC-only reporting; causal over-interpretation of attention/SHAP; no prospective trial, workflow integration, fairness audit or federated multi-hospital evaluation; privacy and governance gaps for notes and wearables.
+
+\subsection{Deployment Challenges for SynCura}
+Sensor-to-server gaps (sampling jitter, MQTT drops, clock skew), SQLite concurrency under many beds, PyTorch CPU latency per ingest ($<$100 ms target, ensemble $\times$3 cost), SHAP latency (KernelSHAP off critical path, cached), dashboard staleness versus backend truth (simulation currently client-side), alert fatigue tuning, and model/data version skew (scaler vs weights vs feature list). Each is tracked as engineering debt with prototype-only labelling.
+
+\subsection{Research Gap and Roadmap}
+Few studies show sensor-to-score-to-explanation-to-alert with causal, holdout-gated evaluation. SynCura fills that narrow integration gap with causal windows, dual explanations, serving stack, NEWS2 operational comparison and honest holdout reporting. Roadmap: (1) RealMIP-style recovery with uncertainty, (2) eICU/MIMIC external validation, (3) calibration (Platt/isotonic) plus reliability diagrams, (4) fairness/subgroup audits, (5) locked-test plus silent prospective logging, (6) graph/variable attention and state-space ablations, (7) federated training for multi-hospital without data pooling.
+
+\section{Conclusion}
+Time-aware attention LSTM is the right baseline; vitals support real-time risk with 0.70--0.85 as a fair band; multimodality and multi-database scale raise ceilings at deployability cost; explainability and operational metrics are mandatory; unseen-patient evaluation is non-negotiable. SynCura's 0.840 validation / 0.844 holdout ensemble demonstrates a deployable, explainable prototype inside that band, with explicit limits and a defined path to robustness. It is a research prototype, not a medical device.
+
+\begin{thebibliography}{00}
+\bibitem{zheng2025} Z.~Zheng et al., ``Development and validation of a dynamic real-time risk prediction model for ICU patients based on longitudinal irregular data: Multicenter retrospective study,'' {\em J. Med. Internet Res.}, vol.~27, p.~e69293, 2025.
+
+\bibitem{choi2020} E.~Choi et al., ``Deep interpretable early warning system for the detection of clinical deterioration,'' {\em IEEE J. Biomed. Health Informat.}, vol.~24, no.~9, pp.~2577--2586, 2020.
+
+\bibitem{wu2024} Y.~Wu et al., ``Revisiting the potential value of vital signs in the real-time prediction of mortality risk in ICU patients,'' {\em J. Big Data}, vol.~11, p.~40, 2024.
+
+\bibitem{scheid2025} M.~R.~Scheid et al., ``Development and validation of a clinical wearable deep learning based continuous in-hospital deterioration prediction model,'' {\em Nature Commun.}, vol.~16, p.~9513, 2025.
+
+\bibitem{xie2025} P.~Xie et al., ``Unlocking the potential of real-time ICU mortality prediction: Redefining risk assessment with continuous data recovery,'' {\em npj Digital Medicine}, vol.~8, p.~733, 2025.
+
+\bibitem{sadanandan2026} B.~Sadanandan, ``Multimodal deep learning for early prediction of patient deterioration in the ICU: Integrating time-series EHR data with clinical notes,'' {\em arXiv:2603.14719}, 2026.
+
+\bibitem{wang2026} Y.~Wang, Y.~Bai, and G.~Jin, ``Explainable deep-learning models for predicting ICU patient outcome,'' {\em Frontiers in Physiol.}, vol.~17, 2026.
+
+\bibitem{yan2026} Z.~Yan et al., ``Deep learning-based in-hospital mortality prediction using long-term sequential data in ICU patients: Multi-center validation study,'' {\em PeerJ}, vol.~14, p.~e21631, 2026.
+
+\bibitem{physionet2012} A.~L.~Goldberger et al., ``PhysioBank, PhysioToolkit, and PhysioNet: Components of a new research resource for complex physiologic signals / Computing in Cardiology Challenge 2012,'' {\em Circulation / PhysioNet}, 2000--2012. [Online]. Available: https://physionet.org/content/challenge-2012/
+
+\bibitem{nguyen2017} T.~Nguyen et al., ``Deep learning to attend to risk in ICU,'' {\em arXiv:1707.05010}, 2017.
+
+\bibitem{mila2025} S.~A.~Mila and S.~Ray, ``IoT for continuous physiological parameters monitoring in healthcare: A review,'' {\em IEEE Sensors J.}, vol.~25, no.~18, pp.~34311--34326, 2025.
+
+\bibitem{masc2025} S.~A.~Mila et al., ``MASC: Wearable design for infectious disease detection through machine learning,'' {\em IEEE Access}, vol.~13, pp.~24108--24123, 2025.
+
+\bibitem{do2023} T.-C.~Do et al., ``Rapid response system based on graph attention network for predicting in-hospital clinical deterioration,'' {\em IEEE Access}, vol.~11, pp.~29091--29100, 2023.
+
+\bibitem{apachescore} W.~A.~Knaus et al., ``APACHE II: A severity of disease classification system,'' {\em Crit. Care Med.}, vol.~13, no.~10, pp.~818--829, 1985.
+
+\bibitem{news2} Royal College of Physicians, ``National Early Warning Score (NEWS) 2,'' {\em RCP London}, 2017.
+
+\end{thebibliography}
+
+\end{document}
