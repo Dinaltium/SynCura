@@ -1,6 +1,6 @@
-% SynCura Review Paper - IEEE DISCOVER style - 7 page target
-% Compile on Overleaf: pdfLaTeX + IEEEtran.cls (built-in)
-\documentclass[conference]{IEEEtran}
+% SynCura Review Paper - IEEE DISCOVER strict match
+% Compile on Overleaf: XeLaTeX + IEEEtran.cls (built-in) + Times New Roman
+\documentclass[a4paper,conference]{IEEEtran}
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{graphicx}
@@ -9,25 +9,50 @@
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{url}
-\usepackage{newtxtext,newtxmath}
-\usepackage{caption}
-\usepackage{stfloats}
 \usepackage{array}
 \usepackage{microtype}
-\emergencystretch=1em
-\sloppy
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+% Map IEEEtran ptm requests (TU) to Times New Roman for strict match
+\DeclareFontFamily{TU}{ptm}{}
+\DeclareFontShape{TU}{ptm}{m}{n}{<-> "Times New Roman/OT:language=dflt;"}{}
+\DeclareFontShape{TU}{ptm}{b}{n}{<-> "Times New Roman/B/OT:language=dflt;"}{}
+\DeclareFontShape{TU}{ptm}{bx}{n}{<-> "Times New Roman/B/OT:language=dflt;"}{}
+\DeclareFontShape{TU}{ptm}{m}{it}{<-> "Times New Roman/I/OT:language=dflt;"}{}
+\DeclareFontShape{TU}{ptm}{b}{it}{<-> "Times New Roman/BI/OT:language=dflt;"}{}
+\DeclareFontShape{TU}{ptm}{bx}{it}{<-> "Times New Roman/BI/OT:language=dflt;"}{}
+\usepackage[cmintegrals,cmbraces]{newtxmath}
+\usepackage{caption}
+\usepackage{stfloats}
+% Strict reference geometry
+\setlength{\columnsep}{15.6pt}
+\setlength{\parindent}{14.4pt}
+\setlength{\parskip}{0pt}
+\linespread{0.96}
+\emergencystretch=0.8em
+% Tighten title top to match reference (~28pt from top)
+\makeatletter
+\renewcommand{\IEEEtitletopspace}{0.5\baselineskip}
+\makeatother
+\renewcommand{\IEEEkeywordsname}{Keywords}
+\pagestyle{plain}
+\pagenumbering{arabic}
 
-\captionsetup[table]{labelfont=bf,textfont=bf,position=top,skip=4pt,font=footnotesize}
-\captionsetup[figure]{labelfont=bf,textfont=normal,position=bottom,skip=4pt,font=footnotesize}
+\captionsetup[table]{labelfont=sc,textfont=sc,position=top,skip=4pt,font=footnotesize,labelsep=period}
+\captionsetup[figure]{labelfont=normalfont,textfont=normalfont,position=bottom,skip=4pt,font=footnotesize,labelsep=period}
 
 \begin{document}
 
 \title{SynCura: Predictive ICU Monitoring with Attention-Based LSTM\\--- A Comprehensive Review of Real-Time Mortality Prediction, Explainability and Deployment}
 
-\author{\IEEEauthorblockN{Fizan Feroz\IEEEauthorrefmark{1}, Abdul Ahad Ikkeri\IEEEauthorrefmark{1}, Fathima Reeha T.A\IEEEauthorrefmark{1}}
-\IEEEauthorblockA{\IEEEauthorrefmark{1}Department of Computer Science and Engineering,\\
-P.~A.~College of Engineering, Mangalore, India\\
-4pa24cs032@pace.edu.in, 4pa24cs002@pace.edu.in, 4pa24cs026@pace.edu.in}
+\author{\IEEEauthorblockN{\fontsize{9}{11}\selectfont Fizan Feroz\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\fontsize{9}{11}\selectfont\IEEEauthorrefmark{1}Department of Computer Science and Engineering,\\P.~A.~College of Engineering, Mangalore, India\\4pa24cs032@pace.edu.in}
+\and
+\IEEEauthorblockN{\fontsize{9}{11}\selectfont Abdul Ahad Ikkeri\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\fontsize{9}{11}\selectfont\IEEEauthorrefmark{1}Department of Computer Science and Engineering,\\P.~A.~College of Engineering, Mangalore, India\\4pa24cs002@pace.edu.in}
+\and
+\IEEEauthorblockN{\fontsize{9}{11}\selectfont Fathima Reeha T.A\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\fontsize{9}{11}\selectfont\IEEEauthorrefmark{1}Department of Computer Science and Engineering,\\P.~A.~College of Engineering, Mangalore, India\\4pa24cs026@pace.edu.in}
 }
 
 \maketitle
@@ -147,27 +172,28 @@ Nguyen et al.\ (2017, attention LSTM on PhysioNet 2012) is the direct ancestor: 
 \section{Comparative Analysis}
 Table I consolidates adoption, findings and limits. Table II lists SynCura inputs. The field separates into three strata: (i) 0.78--0.85 single-dataset structured systems (realistic for SynCura scale), (ii) 0.88--0.93 single-system attention/early-warning with richer inputs, (iii) 0.93--0.97 multi-database or generative systems. Movement between strata is driven by data scale/diversity and input richness, not solely architecture.
 
-\begin{table*}[t]
+\begin{table}[t]
 \caption{Comparative Summary of Reviewed Works and SynCura Adoption}
 \label{tab:comp}
 \centering
 \footnotesize
-\begin{tabular}{>{\raggedright\arraybackslash}p{0.55cm}>{\raggedright\arraybackslash}p{2.7cm}>{\raggedright\arraybackslash}p{3.8cm}>{\raggedright\arraybackslash}p{4.0cm}>{\raggedright\arraybackslash}p{4.4cm}}
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.42cm}>{\raggedright\arraybackslash}p{1.85cm}>{\raggedright\arraybackslash}p{1.65cm}>{\raggedright\arraybackslash}p{1.65cm}>{\raggedright\arraybackslash}p{1.65cm}}
 \toprule
-No. & Study & What SynCura Adopted & Key Findings & Limitations \\
+No. & Study & Adopted & Findings & Limits \\
 \midrule
-{[1]} & Zheng 2025 TBAL JMIR & Arch-task template; LSTM-96 + attention; rolling risk; past-only 90-min & Dyn.\ 0.936 int.\ 0.919 ext.\ recall 79.1\%; hourly; time attribution & Retro; discharge inflation; ext.\ drop; rich EMR; no bedside \\
-{[2]} & Choi 2020 DEWS J-BHI & NEWS2 benchmark; sens/spec/prec/alarms/lead time & Beats NEWS2; $\sim$0.880; per-alert reasons & Retro; correlational; limited workflow \\
-{[3]} & Wu 2024 vitals JBD & Core vitals; upper bound 0.926 & Vitals LSTM beats RF/Cox; ext.\ 889 & Cohort mismatch; little explain; no deploy \\
-{[4]} & Scheid 2025 wearable NatC & SENSE-INGEST-SCORE-ACT; prototype disclaimer & Cont.\ $\sim$0.89; hours lead & Noise/dropouts; integration gaps \\
-{[5]} & Xie 2025 RealMIP npjDM & Missing-data roadmap & Generative 0.957--0.968 eICU/MIMIC/SICdb & Multi-DB; heavy; not local \\
-{[6]} & Sadanandan 2026 multi arXiv & Scope control; 0.70--0.85 band; defer notes & Fusion 0.786; survey 31 studies & Privacy/compute/delay; low PPV \\
-{[7]} & Wang 2026 explain FrontP & Dual attention+SHAP API/dashboard & 0.79--0.87 + reasons & Single DB; non-causal; thin ops metrics \\
-{[8]} & Yan 2026 LSTMvsTr PeerJ & Simple LSTM; unseen-holdout discipline & LSTM 0.802 beats Trans/GRU/RNN/Inf & Modest; stacking cost; no alarm test \\
-{[9]} & PhysioNet 2012 & All training; 12f 90-min; patient splits & 4000+4000 stays 48h public & US 2012; sparse; shift \\
+{[1]} & Zheng 2025 TBAL & LSTM-96 + attention; 90-min & 0.936 int.\ 0.919 ext.\ rec.\ 79.1\% & Retro; ext.\ drop; rich EMR \\
+{[2]} & Choi 2020 DEWS & NEWS2 benchmark; alarms/lead & Beats NEWS2; $\sim$0.880 & Retro; limited workflow \\
+{[3]} & Wu 2024 vitals & Core vitals; bound 0.926 & Beats RF/Cox; ext.\ 889 & Cohort mismatch; no deploy \\
+{[4]} & Scheid 2025 wear. & Streaming path; disclaimer & $\sim$0.89; hours lead & Noise/dropouts; gaps \\
+{[5]} & Xie 2025 RealMIP & Missing-data roadmap & 0.957--0.968 multi-DB & Multi-DB; heavy \\
+{[6]} & Sadanandan 2026 & Scope 0.70--0.85; defer notes & Fusion 0.786; 31 studies & Privacy/compute; low PPV \\
+{[7]} & Wang 2026 expl. & Attention+SHAP API & 0.79--0.87 + reasons & Single DB; non-causal \\
+{[8]} & Yan 2026 LSTM & Simple LSTM; holdout & LSTM 0.802 beats Trans. & Modest; stacking cost \\
+{[9]} & PhysioNet 2012 & 12f 90-min; splits & 4000+4000; 48h public & US 2012; sparse \\
 \bottomrule
 \end{tabular}
-\end{table*}
+\end{table}
 
 \section{SynCura System Perspective}
 \subsection{Serving Architecture}
