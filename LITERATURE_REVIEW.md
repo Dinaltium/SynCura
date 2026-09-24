@@ -1,6 +1,6 @@
 # SynCura — Literature Review
 
-This review positions SynCura relative to one adapted base paper and eight supporting works spanning model architecture, realistic performance targets, hardware/systems design, and handling of real-world data issues (missingness, multimodality, external validation).
+This review positions SynCura relative to one adapted base paper and thirteen supporting works spanning model architecture, realistic performance targets, hardware/systems design, handling of real-world data issues (missingness, multimodality, external validation), and external-validation datasets.
 
 ---
 
@@ -63,6 +63,30 @@ A working wearable-to-ML prototype (body temperature, heart rate, respiratory ra
 
 Uses graph attention networks rather than temporal attention to model inter-variable relationships for deterioration prediction. Included as a deliberate architectural contrast: SynCura adopts temporal (sequence) attention over graph-based (inter-variable) attention, prioritizing streaming/real-time simplicity over explicit variable-relationship modeling. Discussed as a candidate future extension rather than the chosen approach.
 
+### 2.5 Irregular-sampling architectures (adopted direction)
+
+**[S9] Che, Z., Purushotham, S., Cho, K., Sontag, D., & Liu, Y. (2018).** Recurrent Neural Networks for Multivariate Time Series with Missing Values. *Scientific Reports*, 8, 6085. https://doi.org/10.1038/s41598-018-24271-9
+
+The canonical treatment of informative missingness in recurrent models. GRU-D feeds each step four things — the value, a missingness mask, the time since last observation (delta), and a learnable decay of past hidden state toward the feature mean. In effect it learns *how fast to forget* each variable when it stops being measured. Directly relevant because SynCura's gap-channel experiment (E2) is the LSTM analogue of the same idea: mask + delta as extra inputs rather than inside the cell. GRU-D is fully causal and forward-only, so it respects the streaming constraint, and it is the fallback arm if gap-LSTM stalls.
+
+**[S10] Hsieh, Y.-H., Chien, T.-J., Huang, C.-K., Sun, S.-H., & Lin, C. (2025).** MedFuse: Multiplicative Embedding Fusion for Irregular Clinical Time Series. arXiv:2511.09247.
+
+Shows that *how* value and feature identity combine matters: replacing additive fusion with multiplicative modulation (MuFuse) beats state-of-the-art baselines including SUMMIT, evaluated on **PhysioNet 2012 itself** plus MIMIC-III and a longitudinal cohort. For SynCura this is a cheap E4 ablation — fuse each vital's value embedding with its feature embedding multiplicatively instead of concatenating raw values — with no serving-side change.
+
+**[S11] Wang, L., Guo, X., Shi, H., et al. (2025).** CRISP: A causal relationships-guided deep learning framework for advanced ICU mortality prediction. *PMC*, PMC12001402.
+
+Adds an average-treatment-effect (ATE) alignment loss on top of standard BCE, forcing predictions to respect learned causal structure; externally validated MIMIC-III → MIMIC-IV 3.1. For SynCura this is a one-term loss-function experiment for E4: BCE + α·ATE, no architecture or serving change.
+
+### 2.6 Realistic ceilings and external-validation evidence
+
+**[S12] Mamandipoor, B., Hsu, C.-N., Krause, M., Schmidt, U. H., & Gabriel, R. A. (2026).** Development and external validation of a multimodal artificial intelligence mortality prediction model of critically ill patients using multicenter data. *Anesthesiology*.
+
+Trained on MIMIC-III/IV and externally validated on temporally-separated MIMIC, HiRID, and eICU (203,434 admissions, 200+ hospitals): structured-data model AUROC **0.92** internal, **0.84–0.92** across eight external institutions; adding notes + imaging lifts 0.87 → 0.89. This sets SynCura's honest ceiling: a vitals+labs system should target **~0.85–0.87**, and every external claim must be institution-specific, not a single number.
+
+**[S13] (2026).** Multi-source data integration through pooling and transfer learning improves generalizability of ICU mortality and length-of-stay prediction: a four-database external validation study. *Critical Care*. https://doi.org/10.1186/s13054-026-06034-5
+
+Using the TPC architecture across four harmonized BlendedICU databases (eICU-CRD, MIMIC-IV, AmsterdamUMCdb, HiRID, ~20k patients each): internal validation **overestimated external AUROC by up to 13.8%**, site-specific features acted as non-portable "shortcuts", and **data pooling beat both single-source training and transfer learning** for generalization (up to +8.0% composite). This is the quantitative backbone of SynCura's external-validation roadmap: single-dataset numbers are optimistic by construction, and pooling harmonized cohorts is the proven fix.
+
 ---
 
 ## 3. Summary Table
@@ -78,9 +102,25 @@ Uses graph attention networks rather than temporal attention to model inter-vari
 | S6 | Mila & Ray | 2025 | Systems/hardware justification | — |
 | S7 | Mila et al. (MASC) | 2025 | Wearable prototype parallel | — |
 | S8 | Do et al. | 2023 | Alternative architecture (graph attention) | — |
+| S9 | Che et al. (GRU-D) | 2018 | Irregular-sampling RNN; E2 fallback arm | mask + delta + decay |
+| S10 | Hsieh et al. (MedFuse) | 2025 | Multiplicative fusion; E4 ablation (tested on P12) | beats SOTA on P12 |
+| S11 | Wang et al. (CRISP) | 2025 | Causal ATE loss; E4 ablation | MIMIC-III → IV 3.1 |
+| S12 | Mamandipoor et al. | 2026 | Honest ceiling + external validation | 0.92 int / 0.84–0.92 ext |
+| S13 | Four-DB pooling study | 2026 | External-drop evidence; pooling wins | −13.8% ext drop; +8% pool |
 
 ---
 
 ## 4. How SynCura Positions Itself
 
-SynCura targets **real-time, streaming deterioration risk scoring from six continuously monitored vitals**, a deliberately narrower and lower-latency scope than most papers reviewed here, which rely on richer EHR/ICD/lab/imaging inputs (S1, S2, S5) or retrospective multi-day windows. Within this narrower scope, the realistic, defensible performance target — based on S1, S2, and S3 — is an **AUC in the 0.78–0.93 range**, not the 0.93–0.97 range achieved by multi-database, richer-input systems like RealMIP (S5). SynCura's current model (AUC 0.601) falls well short of even the low end of this range, indicating a pipeline issue (class imbalance, insufficient training data) to resolve before further architectural work, rather than a fundamental scope limitation.
+SynCura targets **real-time, streaming mortality-risk scoring from 12 vitals/labs over 90-minute causal windows**, a deliberately narrower and lower-latency scope than most papers reviewed here, which rely on richer EHR/ICD/lab/imaging inputs (S1, S2, S5) or retrospective multi-day windows. Within this narrower scope, the realistic, defensible performance target — based on S1, S2, S3, and now S12 — is an **AUC in the 0.84–0.87 range**: Mamandipoor et al. (S12) show structured-data models reaching 0.87 internally and 0.84–0.92 across external institutions, while S13 proves single-dataset numbers overstate external performance by up to 13.8%. SynCura's deployed ensemble (val 0.840, fresh holdout 0.844) sits at the low end of that band — but those checkpoints predate the causal-windowing fix, so E1 re-baselines before any architectural work. The adopted direction from this review: model the sampling process itself (S9 GRU-D, S10 MedFuse, S5 RealMIP), fuse values with feature identity multiplicatively (S10), align predictions causally (S11), and validate by pooling harmonized multi-hospital cohorts (S13) rather than trusting any single-dataset number.
+
+## 5. External-validation datasets (roadmap)
+
+| Dataset | Size / coverage | Why it matters for SynCura |
+|---|---|---|
+| BlendedICU (harmonized eICU-CRD + MIMIC-IV + AmsterdamUMCdb + HiRID) | ~20k patients each | The S13 pooling recipe, one schema — first external target |
+| MIMIC-IV v3.1 / MIMIC-IV-Ext-CLIF (2026) | 65k+ ICU stays, common longitudinal format | Largest contemporary single source; CLIF format eases multi-site work |
+| eICU-CRD v2.0 | 200k+ admissions, 208 hospitals | Multi-institution generalization test |
+| HiRID v1.1.1 | 34k admissions, 2-min resolution | Highest-frequency vitals; stress-tests irregular-sampling handling |
+| AmsterdamUMCdb | 23k admissions, European practice | Cross-continental validation (cf. FIRST-ICU) |
+| DACMI (MIMIC-III-derived) | 13 labs with ground-truth missingness | Honest benchmark if we ever score our imputation itself |

@@ -81,7 +81,7 @@ class RiskScoreEngine:
                 arch = self._manifest_arch()
                 for member in manifest_members:
                     m = AttentionLSTMModel(
-                        input_size=len(FEATURES),
+                        input_size=int(arch.get('input_size', len(FEATURES))),
                         hidden_size=arch.get('hidden_size', 96),
                         num_layers=arch.get('num_layers', 2),
                         dropout=arch.get('dropout', 0.3),
@@ -147,6 +147,15 @@ class RiskScoreEngine:
     def _manifest_members(self):
         manifest = self._manifest()
         if manifest and isinstance(manifest.get('members'), list) and manifest['members']:
+            arch = manifest.get('arch', {})
+            need = int(arch.get('input_size', len(FEATURES)))
+            if need != len(FEATURES):
+                # Fail fast with a clear message (e.g. a 24-dim gap model
+                # cannot be served by the 12-feature engine yet; see
+                # ml/RESULTS_PLAN.md "Serving work required").
+                print(f'[Inference] Warning: manifest needs input_size={need} but engine '
+                      f'builds {len(FEATURES)}-dim vectors; using directory scan')
+                return None
             members = [m for m in manifest['members']
                        if os.path.exists(m.get('checkpoint', ''))]
             if len(members) == len(manifest['members']):

@@ -24,6 +24,7 @@
   "arch": {
     "model_class": "AttentionLSTMModel",
     "input_size": 12,
+    "note": "input_size must equal len(features); gap (24-dim) models need the serving work in ml/RESULTS_PLAN.md",
     "hidden_size": 96,
     "num_layers": 2,
     "dropout": 0.3,
