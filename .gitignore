@@ -49,3 +49,6 @@ ml/models/*.pt
 # Runtime data (mutable; never commit live databases or job stores)
 backend/data/vitals.db
 backend/data/training_jobs.json
+
+# Shared datasets (fetched via scripts/download_data.py, never commit data bytes)
+data/

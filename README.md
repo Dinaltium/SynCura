@@ -83,6 +83,22 @@ PROJ/
 
 > Contributor guide for AI agents: see `AGENTS.md`.
 
+## Datasets
+
+Large data files are **never committed** — they live on the team Google Drive and are fetched with one command:
+
+```powershell
+pip install gdown
+python scripts/download_data.py --folder-id <drive-folder-id>   # or set SYNCURA_DATA_FOLDER_ID
+```
+
+| Dataset | Contents | Status |
+|---|---|---|
+| PhysioNet 2012 Challenge | 8,000 ICU stays; current training + holdout data | Local absolute path (see `ml/train.py`, `AGENTS.md`) |
+| PhysioNet Challenge 2019 (sepsis) | 20,336 ICU stays, hourly vitals/labs, per-hour sepsis labels; 11/12 SynCura features map directly (no GCS) | On Drive → lands in `data/challenge-2019-1.0.0/` (verified by file count) |
+| MIMIC-III / MIMIC-IV demos (100 pts each) | Schema reference + ETL testbed only — too small to train on | Local `Downloads/Techfusion` zips |
+| MIMIC-IV full / eICU / HiRID | Credentialed (PhysioNet login + CITI + DUA); **never re-upload — DUAs forbid redistribution** | Each teammate credentials individually |
+
 ## Quickstart
 
 ### 0) Prerequisites
