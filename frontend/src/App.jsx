@@ -1,16 +1,18 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { BrowserRouter, Routes, Route, Link, NavLink } from 'react-router-dom'
-import TrainingConfig from './components/TrainingConfig'
-import TrainingMonitor from './components/TrainingMonitor'
-import TrainingJobsList from './components/TrainingJobsList'
-import SimulatedDataFeed from './components/SimulatedDataFeed'
-import WelcomePage from './components/WelcomePage'
-import ArchitecturePage from './components/ArchitecturePage'
-import SensorWaveform from './components/SensorWaveform'
 import { BASE_PATIENTS, SimulationProvider, useSimulation } from './simulationContext'
 import { API_URL } from './api'
 import syncuraLogo from './assets/syncura-logo.png'
+import usePageVisibility from './motion/usePageVisibility'
 import './welcome.css'
+
+const TrainingConfig = lazy(() => import('./components/TrainingConfig'))
+const TrainingMonitor = lazy(() => import('./components/TrainingMonitor'))
+const TrainingJobsList = lazy(() => import('./components/TrainingJobsList'))
+const SimulatedDataFeed = lazy(() => import('./components/SimulatedDataFeed'))
+const WelcomePage = lazy(() => import('./components/WelcomePage'))
+const ArchitecturePage = lazy(() => import('./components/ArchitecturePage'))
+const SensorWaveform = lazy(() => import('./components/SensorWaveform'))
 
 const defaultModelStats = [
   { label: 'AUC-ROC', value: '...', tone: 'good' },
@@ -76,6 +78,44 @@ function MiniIcon({ name }) {
           <path d="M3 16h5l2-6 3 10 2-6h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       )
+    case 'dashboard':
+      return (
+        <svg {...common}>
+          <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.8" />
+        </svg>
+      )
+    case 'data':
+      return (
+        <svg {...common}>
+          <path d="M5 5h14v14H5z" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      )
+    case 'waveform':
+      return (
+        <svg {...common}>
+          <path d="M3 13h3l2-6 4 13 3-10 2 3h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )
+    case 'training':
+      return (
+        <svg {...common}>
+          <path d="M4 19V5M4 19h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="m7 15 3-4 3 2 4-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )
+    case 'architecture':
+      return (
+        <svg {...common}>
+          <rect x="9" y="3" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="3" y="15" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.8" />
+          <rect x="15" y="15" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M12 9v3M6 15v-3h12v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )
     default:
       return null
   }
@@ -90,9 +130,12 @@ function SynCuraWord({ className = '' }) {
   )
 }
 
-function Shell({ children, theme, onToggleTheme }) {
+function Shell({ children, theme, onToggleTheme, statusNote = 'HTTP ingest ready' }) {
+  const isPageVisible = usePageVisibility()
+
   return (
     <div className={`app-shell theme-${theme}`}>
+      <a className="skip-link" href="#main-content">Skip to main content</a>
       <aside className="sidebar">
         <Link to="/" className="brand" aria-label="SynCura clinical intelligence">
           <img src={syncuraLogo} alt="SynCura logo" className="brand-logo" />
@@ -104,55 +147,58 @@ function Shell({ children, theme, onToggleTheme }) {
 
         <nav className="nav-stack" aria-label="Primary navigation">
           <NavLink to="/dashboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <span aria-hidden="true">⌁</span>
+            <MiniIcon name="dashboard" />
             Dashboard
           </NavLink>
           <NavLink to="/simulated-data" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <span aria-hidden="true">◍</span>
+            <MiniIcon name="data" />
             Simulated Data
           </NavLink>
           <NavLink to="/waveforms" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <span aria-hidden="true">〰️</span>
+            <MiniIcon name="waveform" />
             Waveforms
           </NavLink>
           <NavLink to="/training" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <span aria-hidden="true">▣</span>
+            <MiniIcon name="training" />
             Training
           </NavLink>
           <NavLink to="/architecture" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <span aria-hidden="true">◉</span>
+            <MiniIcon name="architecture" />
             Architecture
           </NavLink>
         </nav>
 
-        <button type="button" className="theme-toggle-sidebar" onClick={onToggleTheme}>
+        <button type="button" className="theme-toggle-sidebar" onClick={onToggleTheme} aria-pressed={theme === 'dark'}>
           {theme === 'light' ? 'Dark mode' : 'Light mode'}
         </button>
 
         <div className="sidebar-status">
-          <span className="pulse-dot" />
+          <span className={`pulse-dot motion-live-pulse ${isPageVisible ? '' : 'motion-paused'}`} aria-hidden="true" />
           <div>
             <strong>Live vitals stream</strong>
-            <small>HTTP ingest ready</small>
+            <small>{statusNote}</small>
           </div>
         </div>
       </aside>
-      <main className="main-surface">{children}</main>
+      <main className="main-surface motion-route-enter" id="main-content" tabIndex="-1">{children}</main>
     </div>
   )
 }
 
-function Sparkline({ points }) {
+function Sparkline({ points, patientId, bed }) {
   const width = 148
   const height = 44
   const min = Math.min(...points)
   const max = Math.max(...points)
+  const range = max - min || 1
+  const flat = max === min
   const scaleX = width / (points.length - 1)
-  const scaleY = (value) => height - ((value - min) / (max - min || 1)) * height
+  const scaleY = (value) => flat ? height / 2 : height - ((value - min) / range) * height
   const d = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${index * scaleX} ${scaleY(point)}`).join(' ')
+  const label = patientId ? `Risk trend for patient ${patientId}${bed ? ` in ${bed}` : ''}` : 'Risk trend'
 
   return (
-    <svg className="sparkline" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Risk trend">
+    <svg className="sparkline" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label}>
       <path d={d} />
     </svg>
   )
@@ -168,38 +214,47 @@ function ExplainabilityWaveform({ points }) {
   const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${index * scaleX} ${scaleY(point)}`).join(' ')
 
   const explainBand = (value) => {
-    if (value >= 80) return { label: 'SpO2 drop pattern', tone: 'spo2' }
-    if (value >= 65) return { label: 'Respiratory strain', tone: 'resp' }
-    if (value >= 45) return { label: 'Cardiac stress', tone: 'hr' }
-    return { label: 'Thermal/inflammatory drift', tone: 'temp' }
+    if (value >= 80) return { label: 'SpO2 drop pattern', tone: 'spo2', symbol: '●' }
+    if (value >= 65) return { label: 'Respiratory strain', tone: 'resp', symbol: '▲' }
+    if (value >= 45) return { label: 'Cardiac stress', tone: 'hr', symbol: '■' }
+    return { label: 'Thermal/inflammatory drift', tone: 'temp', symbol: '◆' }
   }
 
   return (
     <div className="explainability-waveform">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Explainability overlay waveform">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Synthetic contribution preview waveform by vital band">
         <path d={path} className="wave-line" />
         {points.map((point, index) => {
           const x = index * scaleX
           const y = scaleY(point)
           const band = explainBand(point)
-          return <circle key={`${point}-${index}`} cx={x} cy={y} r="4" className={`wave-dot ${band.tone}`} />
+          return (
+            <g key={`${point}-${index}`}>
+              <title>{`${band.label}: ${Math.round(point)}`}</title>
+              <circle cx={x} cy={y} r="4" className={`wave-dot ${band.tone}`} />
+              <text x={x} y={y - 8} textAnchor="middle" fontSize="8" aria-hidden="true" className="wave-symbol">{band.symbol}</text>
+            </g>
+          )
         })}
       </svg>
-      <div className="wave-legend">
-        <span className="pill spo2">SpO2-related</span>
-        <span className="pill resp">Resp-related</span>
-        <span className="pill hr">HR-related</span>
-        <span className="pill temp">Temp-related</span>
-      </div>
+      <ul className="wave-legend" aria-label="Vital band key">
+        <li className="pill spo2"><span aria-hidden="true">● </span>SpO2-related</li>
+        <li className="pill resp"><span aria-hidden="true">▲ </span>Resp-related</li>
+        <li className="pill hr"><span aria-hidden="true">■ </span>HR-related</li>
+        <li className="pill temp"><span aria-hidden="true">◆ </span>Temp-related</li>
+      </ul>
     </div>
   )
 }
 
-function RiskDial({ value }) {
+function RiskDial({ value, patientId }) {
   const normalized = Math.min(100, Math.max(0, value))
+  const label = patientId
+    ? `Deterioration risk ${value} percent for patient ${patientId}`
+    : `Deterioration risk ${value} percent`
   return (
-    <div className="risk-dial" style={{ '--risk': `${normalized * 3.6}deg` }}>
-      <span>{value}</span>
+    <div className="risk-dial" role="img" aria-label={label} style={{ '--risk': `${normalized * 3.6}deg` }}>
+      <span aria-hidden="true">{value}</span>
     </div>
   )
 }
@@ -325,6 +380,7 @@ function Dashboard({ theme, onToggleTheme }) {
   const [selectedPatientId, setSelectedPatientId] = useState(BASE_PATIENTS[0].patient_id)
   const [alertThreshold, setAlertThreshold] = useState(75)
   const [liveModelStats, setLiveModelStats] = useState(defaultModelStats)
+  const [metricsError, setMetricsError] = useState(false)
 
   useEffect(() => {
     fetch(`${API_URL}/metrics`)
@@ -339,9 +395,13 @@ function Dashboard({ theme, onToggleTheme }) {
           ])
         }
       })
-      .catch(() => {})
+      .catch(() => { setMetricsError(true) })
   }, [])
 
+  const sortedQueue = useMemo(
+    () => [...patientQueue].sort((a, b) => b.risk - a.risk),
+    [patientQueue]
+  )
   const criticalCount = patientQueue.filter((patient) => patient.risk >= 75).length
   const alertItems = useMemo(() => buildAlerts(patientQueue), [patientQueue])
   const selectedPatient = patientQueue.find((patient) => patient.patient_id === selectedPatientId) || patientQueue[0]
@@ -383,7 +443,7 @@ function Dashboard({ theme, onToggleTheme }) {
   // display-only; the backend enforces the real per-patient cooldown.
 
   return (
-    <Shell theme={theme} onToggleTheme={onToggleTheme}>
+    <Shell theme={theme} onToggleTheme={onToggleTheme} statusNote={isPaused ? 'Paused — resume to stream' : 'HTTP ingest ready'}>
       <section className="page-header">
         <div>
           <p className="eyebrow">Real-time patient intelligence</p>
@@ -403,18 +463,18 @@ function Dashboard({ theme, onToggleTheme }) {
         </article>
         <article className="summary-tile">
           <span className="tile-label"><MiniIcon name="baseline" />Patients tracked</span>
-          <strong>24</strong>
-          <small>across ICU beds</small>
+          <strong>{patientQueue.length}</strong>
+          <small>across ICU beds (simulated)</small>
         </article>
         <article className="summary-tile">
           <span className="tile-label"><MiniIcon name="sliders" />Average lead time</span>
-          <strong>3.4h</strong>
-          <small>before deterioration</small>
+          <strong>{averageLeadTime}h</strong>
+          <small>simulated, before deterioration</small>
         </article>
         <article className="summary-tile">
-          <span className="tile-label"><MiniIcon name="alert" />False alarm rate</span>
-          <strong>11.2%</strong>
-          <small>NEWS2 benchmark</small>
+          <span className="tile-label"><MiniIcon name="alert" />False alarms now</span>
+          <strong>{modelPerf.fp}</strong>
+          <small>at threshold {'>='} {alertThreshold} (simulated)</small>
         </article>
       </section>
 
@@ -427,7 +487,7 @@ function Dashboard({ theme, onToggleTheme }) {
 
       <section className="scenario-panel" aria-label="Scenario simulation controls">
         <div>
-          <h3>Simulation Scenarios</h3>
+          <h2 className="scenario-heading">Simulation Scenarios</h2>
           <p>
             Now running: {activeScenarioLabel}
             {isPaused ? ' (paused)' : ' (live)'}
@@ -465,7 +525,7 @@ function Dashboard({ theme, onToggleTheme }) {
         </div>
       </section>
 
-      <section className="alerts-panel" aria-label="Real-time alerts">
+      <section className="alerts-panel" aria-label="Real-time alerts" aria-live="polite">
         <div className="panel-heading compact">
           <h2 className="heading-with-icon"><MiniIcon name="alert" />Live Alerts</h2>
           <span className="model-badge">{alertItems.length} active</span>
@@ -551,14 +611,14 @@ function Dashboard({ theme, onToggleTheme }) {
           </div>
 
           <div className="patient-list">
-            {patientQueue.map((patient) => (
+            {sortedQueue.map((patient) => (
               <article className="patient-row" key={patient.patient_id}>
                 <div className="patient-identity">
                   <span className={`status-pill ${patient.status.toLowerCase()}`}>{patient.status}</span>
                   <strong>{patient.bed}</strong>
                   <small>Patient {patient.patient_id}</small>
                 </div>
-                <Sparkline points={patient.waveform} />
+                <Sparkline points={patient.waveform} patientId={patient.patient_id} bed={patient.bed} />
                 <div className="vital-strip" aria-label={`Vitals for patient ${patient.patient_id}`}>
                   <span><span className="vital-label"><MiniIcon name="heart" />HR</span> <b>{patient.vitals.HR}</b></span>
                   <span><span className="vital-label"><MiniIcon name="droplet" />SpO2</span> <b>{patient.vitals.SpO2}</b></span>
@@ -566,7 +626,7 @@ function Dashboard({ theme, onToggleTheme }) {
                   <span><span className="vital-label"><MiniIcon name="thermo" />T</span> <b>{patient.vitals.Temp}</b></span>
                 </div>
                 <div className="risk-block">
-                  <RiskDial value={patient.risk} />
+                  <RiskDial value={patient.risk} patientId={patient.patient_id} />
                   <small>{patient.trend} trend</small>
                 </div>
                 <div className="lead-signal">{patient.lead}</div>
@@ -585,8 +645,11 @@ function Dashboard({ theme, onToggleTheme }) {
         <aside className="panel insight-panel">
           <div className="panel-heading compact">
             <h2>Model Snapshot</h2>
-            <span className="model-badge">LSTM baseline</span>
+            <span className="model-badge">3-model ensemble</span>
           </div>
+          {metricsError && (
+            <p className="metrics-note" role="note">Offline metrics unavailable — showing placeholders. Start the backend API to load them.</p>
+          )}
           <div className="metric-grid">
             {liveModelStats.map((stat) => (
               <div className={`metric-card ${stat.tone}`} key={stat.label}>
@@ -598,7 +661,7 @@ function Dashboard({ theme, onToggleTheme }) {
 
           <div className="divider" />
 
-          <h3>Risk Impact - Patient {selectedPatient?.patient_id}</h3>
+          <h3>Risk Impact - Patient {selectedPatient?.patient_id} <small className="synthetic-tag">(synthetic preview, not attention/SHAP)</small></h3>
           <ExplainabilityWaveform points={selectedPatient?.waveform || []} />
           <div className="signal-list">
             {impactMetrics.map((metric) => (
@@ -637,8 +700,9 @@ export default function App() {
   return (
     <SimulationProvider>
       <BrowserRouter>
+        <Suspense fallback={<main className="main-surface" aria-label="Loading page"><p>Loading…</p></main>}>
         <Routes>
-          <Route path="/" element={<WelcomePage />} />
+          <Route path="/" element={<WelcomePage theme={theme} onToggleTheme={toggleTheme} />} />
           <Route
             path="/dashboard"
             element={<Dashboard theme={theme} onToggleTheme={toggleTheme} />}
@@ -668,6 +732,7 @@ export default function App() {
             element={<RoutedPage theme={theme} onToggleTheme={toggleTheme}><SensorWaveform /></RoutedPage>}
           />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </SimulationProvider>
   )

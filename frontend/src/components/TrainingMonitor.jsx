@@ -39,9 +39,9 @@ export default function TrainingMonitor() {
         const response = await axios.get(`${apiUrl}/training/${jobId}`);
         setJob(response.data);
         
-        // Track progress history for visualization
+        // Track progress history for visualization (capped to avoid unbounded growth)
         if (response.data.metrics) {
-          setProgressHistory(prev => [...prev, response.data.metrics]);
+          setProgressHistory(prev => [...prev, response.data.metrics].slice(-200));
         }
       } catch (err) {
         console.error('Error fetching progress:', err);
@@ -53,9 +53,9 @@ export default function TrainingMonitor() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8 flex items-center justify-center">
+      <div className="training-page min-h-screen p-8 flex items-center justify-center" role="status" aria-live="polite">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="training-spinner animate-spin rounded-full h-16 w-16 mx-auto mb-4" aria-hidden="true"></div>
           <p className="text-gray-600">Loading training job...</p>
         </div>
       </div>
@@ -64,10 +64,10 @@ export default function TrainingMonitor() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+      <div className="training-page min-h-screen p-8">
         <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
+          <div className="training-panel bg-white rounded-lg shadow-lg p-8">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4" role="alert">
               <p className="text-red-800">{error}</p>
             </div>
             <button
@@ -94,16 +94,16 @@ export default function TrainingMonitor() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+    <div className="training-page min-h-screen p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className="training-panel bg-white rounded-lg shadow-lg p-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold text-gray-800">Training Job {jobId.slice(0, 8)}</h1>
               <p className="text-gray-600 mt-1">Monitor model training progress</p>
             </div>
-            <div className={`px-4 py-2 rounded-lg border-2 font-semibold capitalize ${statusColors[job.status]}`}>
+            <div className={`px-4 py-2 rounded-lg border-2 font-semibold capitalize ${statusColors[job.status]}`} role="status">
               {job.status}
             </div>
           </div>
@@ -126,7 +126,7 @@ export default function TrainingMonitor() {
               <label className="text-sm font-medium text-gray-700">Training Progress</label>
               <span className="text-sm text-gray-600">{progress}%</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden" role="progressbar" aria-valuenow={progress} aria-valuemin="0" aria-valuemax="100" aria-label="Training progress">
               <div
                 className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-500"
                 style={{ width: `${progress}%` }}
@@ -164,9 +164,9 @@ export default function TrainingMonitor() {
                   </div>
                 )}
                 {job.metrics.accuracy != null && (
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
+                  <div className="bg-gray-50 p-4 rounded-lg">
                     <p className="text-xs text-gray-600 uppercase">Accuracy</p>
-                    <p className="text-2xl font-bold text-purple-600">
+                    <p className="text-2xl font-bold text-gray-800">
                       {(job.metrics.accuracy * 100).toFixed(2)}%
                     </p>
                   </div>

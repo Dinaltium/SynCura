@@ -55,14 +55,14 @@ export default function TrainingConfig() {
   const availableFeatures = ['HR', 'RespRate', 'Temp', 'NISysABP', 'NIDiasABP', 'SpO2', 'EtCO2'];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+    <div className="training-page min-h-screen p-8">
       <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className="training-panel bg-white rounded-lg shadow-lg p-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">ML Model Training</h1>
           <p className="text-gray-600 mb-8">Configure and start a new training job</p>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg" role="alert">
               <p className="text-red-800">{error}</p>
             </div>
           )}
@@ -74,10 +74,11 @@ export default function TrainingConfig() {
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="tc-physionet-path" className="block text-sm font-medium text-gray-700 mb-2">
                     PhysioNet Data Path
                   </label>
                   <input
+                    id="tc-physionet-path"
                     type="text"
                     name="physionet_path"
                     value={formData.physionet_path}
@@ -90,10 +91,11 @@ export default function TrainingConfig() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="tc-outcomes-path" className="block text-sm font-medium text-gray-700 mb-2">
                     Outcomes File Path
                   </label>
                   <input
+                    id="tc-outcomes-path"
                     type="text"
                     name="outcomes_path"
                     value={formData.outcomes_path}
@@ -113,10 +115,11 @@ export default function TrainingConfig() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="tc-epochs" className="block text-sm font-medium text-gray-700 mb-2">
                     Epochs
                   </label>
                   <input
+                    id="tc-epochs"
                     type="number"
                     name="epochs"
                     value={formData.epochs}
@@ -128,10 +131,11 @@ export default function TrainingConfig() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="tc-batch-size" className="block text-sm font-medium text-gray-700 mb-2">
                     Batch Size
                   </label>
                   <input
+                    id="tc-batch-size"
                     type="number"
                     name="batch_size"
                     value={formData.batch_size}
@@ -143,10 +147,11 @@ export default function TrainingConfig() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="tc-learning-rate" className="block text-sm font-medium text-gray-700 mb-2">
                     Learning Rate
                   </label>
                   <input
+                    id="tc-learning-rate"
                     type="number"
                     name="learning_rate"
                     value={formData.learning_rate}
@@ -159,10 +164,11 @@ export default function TrainingConfig() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="tc-max-patients" className="block text-sm font-medium text-gray-700 mb-2">
                     Max Patients
                   </label>
                   <input
+                    id="tc-max-patients"
                     type="number"
                     name="max_patients"
                     value={formData.max_patients}

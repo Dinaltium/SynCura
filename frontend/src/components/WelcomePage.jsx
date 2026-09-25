@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import syncuraLogo from '../assets/syncura-logo.png'
 import ArchitecturePage from './ArchitecturePage'
+import usePageVisibility from '../motion/usePageVisibility'
 
 function SynCuraWord({ className = '' }) {
   return (
@@ -12,34 +13,29 @@ function SynCuraWord({ className = '' }) {
   )
 }
 
-export default function WelcomePage() {
-  const [theme, setTheme] = useState(() => {
-    const storedTheme = localStorage.getItem('syncura-theme')
-    return storedTheme === 'dark' ? 'dark' : 'light'
-  })
+export default function WelcomePage({ theme, onToggleTheme }) {
   const [bpm, setBpm] = useState(72)
   const [riskTarget, setRiskTarget] = useState(84)
   const [riskPercent, setRiskPercent] = useState(0)
-  const nextTheme = theme === 'light' ? 'dark' : 'light'
-
-  useEffect(() => {
-    localStorage.setItem('syncura-theme', theme)
-  }, [theme])
+  const isPageVisible = usePageVisibility()
 
   useEffect(() => {
     const timer = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') return
       setBpm((currentBpm) => {
         const direction = Math.random() > 0.5 ? 1 : -1
-        const nextBpm = currentBpm + direction * (Math.random() > 0.4 ? 1 : 2)
-        return Math.max(66, Math.min(88, nextBpm))
+        const driftToRestingRange = currentBpm < 72 ? 1 : currentBpm > 80 ? -1 : direction
+        const step = Math.random() > 0.86 ? 2 : 1
+        return Math.max(68, Math.min(84, currentBpm + driftToRestingRange * step))
       })
-    }, 3200)
+    }, 2400)
 
     return () => window.clearInterval(timer)
   }, [])
 
   useEffect(() => {
     const timer = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') return
       setRiskTarget((currentRisk) => {
         const direction = Math.random() > 0.45 ? 1 : -1
         const nextRisk = currentRisk + direction * (Math.random() > 0.5 ? 1 : 2)
@@ -71,7 +67,7 @@ export default function WelcomePage() {
   }, [riskTarget])
 
   return (
-    <div className={`welcome-container theme-${theme}`}>
+    <div className={`welcome-container theme-${theme}${isPageVisible ? '' : ' page-hidden'}`}>
       {/* Navigation Bar */}
       <nav className="welcome-nav">
         <div className="welcome-nav-content">
@@ -86,8 +82,9 @@ export default function WelcomePage() {
             <button
               type="button"
               className="theme-toggle"
-              onClick={() => setTheme(nextTheme)}
-              aria-label={`Switch to ${nextTheme} theme`}
+              onClick={onToggleTheme}
+              aria-pressed={theme === 'dark'}
+              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
             >
               {theme === 'light' ? 'Dark mode' : 'Light mode'}
             </button>
@@ -106,7 +103,7 @@ export default function WelcomePage() {
             <h1 className="welcome-headline">
               Predictive Clinical
               <br />
-              <span className="highlight">Intelligence</span>
+              <span className="highlight">Intelligence.</span>
             </h1>
             <p className="welcome-subheadline">
               Bridging the gap between raw medical data and life-saving decisions. <SynCuraWord /> provides an end-to-end framework for ML-powered ICU patient monitoring and outcome prediction.
@@ -121,17 +118,17 @@ export default function WelcomePage() {
             </div>
           </div>
 
-          {/* Live Dashboard Preview */}
+          {/* Sample Dashboard Preview (synthetic demo, not live inference) */}
           <div className="welcome-preview">
             <div className="preview-header">
-              <span className="preview-badge">LIVE FEED: PATIENT #4012</span>
-              <span className="preview-status">●</span>
+              <span className="preview-badge">SAMPLE PREVIEW: SYNTHETIC PATIENT #4012</span>
+              <span className="preview-status" aria-hidden="true">●</span>
             </div>
 
             <div className="preview-content">
               <div className="preview-metrics">
                 <div className="metric-card metric-accent">
-                  <div className="metric-wave">
+                  <div className="metric-wave" aria-hidden="true">
                     <svg viewBox="0 0 100 30" preserveAspectRatio="none">
                       <polyline
                         points="0,15 10,10 20,8 30,12 40,6 50,15 60,12 70,10 80,14 90,8 100,12"
@@ -141,24 +138,24 @@ export default function WelcomePage() {
                       />
                     </svg>
                   </div>
-                  <div key={bpm} className="metric-value bpm-live">{bpm} BPM</div>
+                  <div className="metric-value bpm-live" aria-live="off">{bpm} BPM</div>
                 </div>
               </div>
 
               <div className="preview-risk">
                 <div className="risk-header">RISK ASSESSMENT</div>
                 <div className="risk-item">
-                  <div key={riskTarget} className="risk-label risk-percent-live">{riskPercent}% Sepsis</div>
+                  <div className="risk-label risk-percent-live">{riskPercent}% Sepsis</div>
                   <div className="risk-bar">
-                    <div key={riskTarget} className="risk-fill risk-fill-live" style={{ width: `${riskPercent}%` }}></div>
+                    <div className="risk-fill risk-fill-live" style={{ '--risk-scale': riskPercent / 100 }}></div>
                   </div>
-                  <div className="risk-time">Predicted in next 4 hours</div>
+                  <div className="risk-time">Simulated preview — not a clinical prediction</div>
                 </div>
               </div>
             </div>
 
             <div className="preview-footer">
-              <span className="footer-tag">MODEL_LOG: INFERENCE_ACTIVE</span>
+              <span className="footer-tag">SYNTHETIC DEMO — NO MODEL INFERENCE</span>
             </div>
           </div>
 
@@ -186,70 +183,37 @@ export default function WelcomePage() {
 
       {/* Features Section */}
       <section className="welcome-features" id="features">
-        <h2>Comprehensive Monitoring Suite</h2>
-        <div className="features-grid">
-          <div className="feature-card">
-            <div className="feature-icon">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" stroke="currentColor" strokeWidth="2" />
-                <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+        <h2>What the prototype shows</h2>
+        <p className="section-answer">SynCura presents a synthetic ICU patient queue, local risk simulation, vital trends, explainability signals, NEWS2 comparison, and model-training workflows in one browser-based research prototype.</p>
+        <div className="feature-list">
+          <article className="feature-row">
+            <span className="feature-row-label">Workflow</span>
+            <div>
+              <h3>Queue-first monitoring</h3>
+              <p>Review simulated patient state, risk, vitals, trends, and alerts from a ranked operational surface.</p>
             </div>
-            <h3>Real-Time Monitoring</h3>
-            <p>Live patient vitals with instant risk scoring and clinical alerts</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+          </article>
+          <article className="feature-row">
+            <span className="feature-row-label">Model</span>
+            <div>
+              <h3>Three-model ensemble</h3>
+              <p>Explore the documented attention-based LSTM workflow using 12 features and 90-minute windows.</p>
             </div>
-            <h3>LSTM Architecture</h3>
-            <p>Deep learning models trained on PhysioNet data for temporal predictions</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor" />
-              </svg>
+          </article>
+          <article className="feature-row">
+            <span className="feature-row-label">Evidence</span>
+            <div>
+              <h3>84.4% holdout AUC</h3>
+              <p>Research-prototype holdout result from unseen set-B windows, with the evaluation caveats retained.</p>
             </div>
-            <h3>84.4% Holdout AUC</h3>
-            <p>Research-prototype performance on unseen PhysioNet patients (val 0.840)</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">
-              <svg viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2" />
-                <path d="M9 9h6v6H9z" fill="currentColor" />
-              </svg>
+          </article>
+          <article className="feature-row">
+            <span className="feature-row-label">Review</span>
+            <div>
+              <h3>Explainability beside prediction</h3>
+              <p>Inspect synthetic risk impact, hand-built SVG trends, and NEWS2 comparison without leaving the workflow.</p>
             </div>
-            <h3>Interactive Dashboard</h3>
-            <p>Intuitive interface for clinicians to review predictions and vitals</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z" stroke="currentColor" strokeWidth="2" />
-              </svg>
-            </div>
-            <h3>SHAP Explainability</h3>
-            <p>Transparent feature contributions to every clinical prediction</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" stroke="currentColor" strokeWidth="2" />
-                <path d="M7 10h10M7 14h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </div>
-            <h3>NEWS2 Scoring</h3>
-            <p>Integrated clinical risk scores alongside ML predictions</p>
-          </div>
+          </article>
         </div>
       </section>
 
@@ -260,10 +224,10 @@ export default function WelcomePage() {
 
       {/* CTA Section */}
       <section className="welcome-cta">
-        <h2>Ready to Enhance Patient Outcomes?</h2>
-        <p>Start exploring <SynCuraWord />'s predictive capabilities with real-time ICU monitoring.</p>
+        <h2>Open the simulated dashboard</h2>
+        <p>Review the synthetic patient queue, scenario controls, and model-facing views in the browser.</p>
         <Link to="/dashboard" className="welcome-btn welcome-btn-primary welcome-btn-large">
-          Launch Dashboard
+          View dashboard
         </Link>
       </section>
     </div>

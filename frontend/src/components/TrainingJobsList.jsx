@@ -38,9 +38,9 @@ export default function TrainingJobsList() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="animate-pulse space-y-4">
+      <div className="training-page min-h-screen p-8" role="status" aria-live="polite">
+        <div className="training-content max-w-6xl mx-auto">
+          <div className="training-loading animate-pulse space-y-4">
             <div className="h-8 bg-gray-300 rounded w-1/3"></div>
             <div className="h-64 bg-gray-300 rounded"></div>
           </div>
@@ -50,9 +50,9 @@ export default function TrainingJobsList() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+    <div className="training-page min-h-screen p-8">
+      <div className="training-content max-w-6xl mx-auto">
+        <div className="training-panel bg-white rounded-lg shadow-lg p-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -68,7 +68,7 @@ export default function TrainingJobsList() {
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg" role="alert">
               <p className="text-red-800">{error}</p>
             </div>
           )}
@@ -94,6 +94,16 @@ export default function TrainingJobsList() {
                   <div
                     key={job.job_id}
                     onClick={() => navigate(`/training/${job.job_id}`)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') navigate(`/training/${job.job_id}`)
+                      if (event.key === ' ') {
+                        event.preventDefault()
+                        navigate(`/training/${job.job_id}`)
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open training job ${job.job_id.slice(0, 8)}`}
                     className="p-6 border border-gray-200 rounded-lg hover:shadow-md hover:border-blue-300 cursor-pointer transition"
                   >
                     <div className="flex items-center justify-between mb-4">
@@ -105,7 +115,7 @@ export default function TrainingJobsList() {
                           Started: {new Date(job.created_at).toLocaleString()}
                         </p>
                       </div>
-                      <div className={`px-4 py-2 rounded-lg border-2 font-semibold capitalize ${statusColors[job.status]}`}>
+                      <div className={`px-4 py-2 rounded-lg border-2 font-semibold capitalize ${statusColors[job.status]}`} role="status">
                         {job.status}
                       </div>
                     </div>
@@ -169,7 +179,7 @@ export default function TrainingJobsList() {
                         {job.metrics.accuracy != null && (
                           <div className="bg-purple-50 p-2 rounded">
                             <p className="text-xs text-gray-600">Acc</p>
-                            <p className="font-semibold text-purple-600">
+                            <p className="font-semibold text-gray-800">
                               {(job.metrics.accuracy * 100).toFixed(1)}%
                             </p>
                           </div>

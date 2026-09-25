@@ -1,0 +1,98 @@
+:root {
+  --font-ui: 'Atkinson Hyperlegible', sans-serif;
+  --font-display: 'Atkinson Hyperlegible', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --color-canvas: #f4f7f8;
+  --color-surface: #ffffff;
+  --color-surface-muted: #e8eff0;
+  --color-surface-raised: #ffffff;
+  --color-ink: #12343b;
+  --color-ink-muted: #557078;
+  --color-ink-subtle: #71868b;
+  --color-border: #c9d8db;
+  --color-border-strong: #a9c1c5;
+  --color-brand: #117d8c;
+  --color-brand-light: #159eaf;
+  --color-brand-dark: #0d6470;
+  --color-live: #258a62;
+  --color-live-soft: #dcefe7;
+  --color-warning: #986617;
+  --color-warning-soft: #f7ecd4;
+  --color-critical: #b33d3a;
+  --color-critical-soft: #f7e2e0;
+  --color-info: #356a91;
+  --color-info-soft: #e2edf5;
+  --color-focus: #159eaf;
+  --color-on-brand: #ffffff;
+  --color-sensor-hr: #bf3f2f;
+  --color-sensor-spo2: #117d8c;
+  --color-sensor-resp: #9d521d;
+  --color-sensor-temp: #7c3a1d;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  --radius-control: 6px;
+  --radius-panel: 8px;
+  --radius-pill: 999px;
+
+  --shadow-panel: 0 1px 2px rgba(18, 52, 59, 0.05), 0 8px 24px rgba(18, 52, 59, 0.06);
+  --shadow-focus: 0 0 0 3px rgba(21, 158, 175, 0.25);
+
+  --duration-fast: 140ms;
+  --duration-normal: 220ms;
+  --duration-slow: 420ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.theme-dark {
+  --color-canvas: #0c1b20;
+  --color-surface: #12282e;
+  --color-surface-muted: #19363d;
+  --color-surface-raised: #1b3b43;
+  --color-ink: #e8f3f4;
+  --color-ink-muted: #a9c0c4;
+  --color-ink-subtle: #819ba0;
+  --color-border: #2b4a51;
+  --color-border-strong: #44676e;
+  --color-brand: #4bc2d0;
+  --color-brand-light: #7bd9e2;
+  --color-brand-dark: #2b9baa;
+  --color-live: #66d7a7;
+  --color-live-soft: #19483d;
+  --color-warning: #f0bd63;
+  --color-warning-soft: #4b391d;
+  --color-critical: #f08079;
+  --color-critical-soft: #4e292b;
+  --color-info: #8fc5e6;
+  --color-info-soft: #1e3c50;
+  --color-focus: #7bd9e2;
+  --color-on-brand: #082126;
+  --color-sensor-hr: #f08079;
+  --color-sensor-spo2: #4bc2d0;
+  --color-sensor-resp: #f0bd63;
+  --color-sensor-temp: #e0a27e;
+
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.28), 0 10px 28px rgba(0, 0, 0, 0.16);
+  --shadow-focus: 0 0 0 3px rgba(123, 217, 226, 0.28);
+}
+
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  box-shadow: var(--shadow-focus);
+}
+
+::selection {
+  color: var(--color-on-brand);
+  background: var(--color-brand);
+}
