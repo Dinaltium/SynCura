@@ -1102,7 +1102,6 @@
   .welcome-container *,
   .welcome-container *::before,
   .welcome-container *::after {
-    animation: none !important;
     transition-duration: 100ms !important;
   }
 }
