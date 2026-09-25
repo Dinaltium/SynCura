@@ -14,28 +14,28 @@ export default function SensorWaveform() {
     HR: {
       label: 'Heart Rate',
       unit: 'bpm',
-      color: '#bf3f2f',
+      color: 'var(--color-sensor-hr, #bf3f2f)',
       min: 40,
       max: 140,
     },
     SpO2: {
       label: 'SpO2',
       unit: '%',
-      color: '#117D8C',
+      color: 'var(--color-sensor-spo2, #117D8C)',
       min: 70,
       max: 100,
     },
     Resp: {
       label: 'Respiration',
       unit: 'bpm',
-      color: '#9d521d',
+      color: 'var(--color-sensor-resp, #9d521d)',
       min: 8,
       max: 40,
     },
     Temp: {
       label: 'Temperature',
       unit: '°C',
-      color: '#7c3a1d',
+      color: 'var(--color-sensor-temp, #7c3a1d)',
       min: 35,
       max: 40,
     },
@@ -89,14 +89,16 @@ export default function SensorWaveform() {
       <div className="waveform-header">
         <div>
           <h1>Sensor Waveforms</h1>
-          <p className="waveform-subtitle">Real-time vital signs monitoring and trend analysis</p>
+          <p className="waveform-subtitle">Simulated vital-sign trends for demonstration (synthetic data, not live monitoring)</p>
         </div>
         <div className="sensor-toggles">
           {Object.keys(selectedSensors).map(sensor => (
             <button
               key={sensor}
+              type="button"
               className={`sensor-toggle ${selectedSensors[sensor] ? 'active' : ''}`}
               onClick={() => toggleSensor(sensor)}
+              aria-pressed={selectedSensors[sensor]}
             >
               {sensor}
             </button>
@@ -145,22 +147,12 @@ export default function SensorWaveform() {
                         {config.unit}
                       </span>
                     </div>
-                    <svg viewBox="0 0 420 170" className="waveform-svg" role="img" aria-label={`${config.label} waveform`}>
-                      <defs>
-                        <linearGradient id={`grad-${patient.patient_id}-${sensor}`} x1="0" x2="0" y1="0" y2="1">
-                          <stop offset="0%" stopColor={config.color} stopOpacity="0.28" />
-                          <stop offset="100%" stopColor={config.color} stopOpacity="0.02" />
-                        </linearGradient>
-                      </defs>
-                      <path
-                        d={`${path} L 410 160 L 10 160 Z`}
-                        fill={`url(#grad-${patient.patient_id}-${sensor})`}
-                        opacity="0.55"
-                      />
+                    <svg viewBox="0 0 420 170" className="waveform-svg" role="img" aria-label={`${config.label} waveform for ${patient.bed}; current value ${patient.vitals[sensor]} ${config.unit}`}>
                       <path
                         d={path}
                         className="waveform-line"
                         stroke={config.color}
+                        pathLength="1"
                       />
                     </svg>
                   </div>

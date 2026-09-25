@@ -85,6 +85,8 @@ PROJ/
 │   ├── src/
 │   │   ├── App.jsx              # Main shell, routing, dashboard layout
 │   │   ├── simulationContext.jsx # Client-side simulation engine (12 patients)
+│   │   ├── theme/tokens.css     # Shared light/dark semantic tokens
+│   │   ├── motion/              # Motion CSS and page-visibility utilities
 │   │   ├── components/
 │   │   │   ├── WelcomePage.jsx       # Landing page with hero
 │   │   │   ├── SensorWaveform.jsx    # SVG waveform charts
@@ -94,6 +96,8 @@ PROJ/
 │   │   │   ├── SimulatedDataFeed.jsx # Tabular simulated data view
 │   │   │   └── ArchitecturePage.jsx  # System architecture docs
 │   │   └── welcome.css
+│   ├── tailwind.config.js       # Tailwind content scanning and token aliases
+│   ├── postcss.config.js        # Tailwind and Autoprefixer pipeline
 │   ├── package.json             # react, react-router-dom, axios, chart.js
 │   └── index.html
 │
@@ -184,6 +188,9 @@ Notes:
 
 - **Python**: Follow existing style, no comments unless complex logic
 - **JavaScript/JSX**: React functional components with hooks, Tailwind CSS classes
+- **Frontend theme**: Use `frontend/src/theme/tokens.css` for both light and dark semantic tokens; do not introduce page-local color systems.
+- **Frontend motion**: Use `frontend/src/motion/` utilities. Never use `transition: all`; animate only approved state properties and provide a reduced-motion path.
+- **Frontend honesty**: Keep the simulation banner, research-prototype qualifiers, and not-HIPAA-ready note visible. Do not invent metrics, certifications, clinical claims, or prospective evidence.
 - **No new dependencies** without checking existing ones first
 - **Model compatibility**: Always update both `train.py` AND `inference.py` when changing features/architecture
 - **Thread safety**: RiskScoreEngine uses `threading.Lock()` for concurrent access
@@ -200,6 +207,12 @@ curl http://localhost:8000/health
 
 # Test ingestion
 curl -X POST http://localhost:8000/ingest -H "Content-Type: application/json" -d '{"patient_id":"test","timestamp":1,"HR":85,"SpO2":98,"RespRate":16,"Temp":37,"NISysABP":120,"NIDiasABP":80}'
+```
+
+Frontend UI detector:
+
+```powershell
+npx impeccable detect frontend/src
 ```
 
 ## Known Issues

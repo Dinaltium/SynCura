@@ -225,6 +225,7 @@ export function SimulationProvider({ children }) {
     if (isPaused) return undefined
 
     const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') return
       const { profile, lead } = SCENARIOS[activeScenario]
       setPatientQueue((current) => {
         const updated = current.map((patient) => updatePatient(patient, profile, lead))

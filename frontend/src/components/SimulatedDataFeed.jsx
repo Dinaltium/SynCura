@@ -38,17 +38,17 @@ export default function SimulatedDataFeed() {
         <table className="sim-feed-table">
           <thead>
             <tr>
-              <th>Patient ID</th>
-              <th>Bed</th>
-              <th>Status</th>
-              <th>Risk</th>
-              <th>Trend</th>
-              <th>HR</th>
-              <th>SpO2</th>
-              <th>RR</th>
-              <th>Temp</th>
-              <th>Lead Signal</th>
-              <th>Recent Risk Window</th>
+              <th scope="col">Patient ID</th>
+              <th scope="col">Bed</th>
+              <th scope="col">Status</th>
+              <th scope="col">Risk</th>
+              <th scope="col">Trend</th>
+              <th scope="col">HR</th>
+              <th scope="col">SpO2</th>
+              <th scope="col">RR</th>
+              <th scope="col">Temp</th>
+              <th scope="col">Lead Signal</th>
+              <th scope="col">Recent Risk Window</th>
             </tr>
           </thead>
           <tbody>
