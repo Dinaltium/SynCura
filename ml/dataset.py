@@ -107,10 +107,12 @@ def create_sequences_from_physionet(data_list, vital_features=None, window_minut
     Remaining NaNs (columns entirely missing for a patient) are left as NaN;
     callers fill them with the training-set mean before normalizing.
 
-    Windows are CAUSAL: each window is sliced from raw data first and
-    interpolated only within itself, so no future information leaks into
-    early windows. NOTE: checkpoints trained before this fix used
-    whole-stay interpolation and must be retrained for a fair comparison.
+    Windows are CAUSAL: the stay is forward-filled once (past-only, vectorized),
+    then windows are sliced from the carried frame — no future information can
+    leak, while sparse labs keep their last-known value. Values never observed
+    before the window end stay NaN (train-mean filled later). NOTE: checkpoints
+    trained before this fix used whole-stay interpolation + backward-fill and
+    must be retrained for a fair comparison.
 
     `gap_channels`: when True, append 12 time-since-last-observation channels
     (minutes since the feature was actually measured, 0 = observed now, capped
@@ -151,21 +153,27 @@ def create_sequences_from_physionet(data_list, vital_features=None, window_minut
         if label_mode == 'last':
             starts = [len(df_raw)]
         elif label_mode == 'proximity':
-            cutoff = max(seq_len, len(df_raw) - horizon_hours * 60)
+            cutoff = max(seq_len, len(df_raw) - int(horizon_hours * 60))
             starts = range(cutoff, len(df_raw), stride)
         else:  # 'all'
             starts = range(seq_len, len(df_raw), stride)
 
+        # CAUSAL carry-forward: ffill over the whole stay is past-only by
+        # construction, so it can never leak future information. Slice windows
+        # from the carried frame: sparse labs (BUN, creatinine, ...) keep
+        # their last-known value instead of collapsing to the train mean.
+        # Deliberately NO linear interpolation and NO backward-fill:
+        #  - bfill pulls values from the future (the original leakage);
+        #  - interpolate-then-slice-only-inside-the-window discards pre-window
+        #    history, which starved sparse labs and collapsed AUC to ~0.69.
+        # Values never observed before the window end stay NaN and are filled
+        # with the train mean at normalization time (honest missingness).
+        # Models trained before the causal fix still need retraining.
+        df_carry = df_raw.ffill()
         for i in starts:
-            # CAUSAL windowing: slice the RAW window first, then interpolate
-            # ONLY within the window. The previous code interpolated the whole
-            # stay before slicing, letting future measurements leak into early
-            # windows. Models trained before this fix need retraining.
             window_raw = df_raw.iloc[i - seq_len:i]
             obs_win = window_raw.notna().values.astype(np.float32)
-            window_df = window_raw.interpolate(method='linear', limit_direction='both')
-            window_df = window_df.ffill().bfill()
-            window = window_df.values
+            window = df_carry.iloc[i - seq_len:i].values
             if gap_channels:
                 gaps = np.zeros_like(obs_win, dtype=np.float32)
                 for c in range(obs_win.shape[1]):

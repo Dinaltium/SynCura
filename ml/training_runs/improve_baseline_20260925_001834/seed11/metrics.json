@@ -1,0 +1,31 @@
+{
+  "config": "baseline-causal-seed11",
+  "features": [
+    "HR",
+    "RespRate",
+    "Temp",
+    "NISysABP",
+    "NIDiasABP",
+    "SpO2",
+    "GCS",
+    "BUN",
+    "Creatinine",
+    "WBC",
+    "Platelets",
+    "Glucose"
+  ],
+  "window": 90,
+  "hidden": 96,
+  "causal": true,
+  "train": "set-a_full(excl orig val) + 80pct set-b",
+  "fresh_holdout": "20pct set-b (seed 123)",
+  "best_auc": 0.8364090189014627,
+  "val_auc": 0.8364090189014627,
+  "val_accuracy": 0.7486803318022897,
+  "val_recall": 0.7790798611111112,
+  "fresh_holdout_auc": 0.8341688615546142,
+  "fresh_holdout_accuracy": 0.7527117229870671,
+  "fresh_holdout_recall": 0.8062678062678063,
+  "epochs_trained": 20,
+  "seed": 11
+}
