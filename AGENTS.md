@@ -10,18 +10,18 @@ SynCura is a **Predictive ICU Monitoring System** that uses deep learning (LSTM 
 # Activate virtual environment
 .\.venv\Scripts\Activate.ps1
 
-# Train the ML model (with attention + early stopping + SpO2)
+# Train the ML model (with attention + early stopping + SpO2).
+# Paths resolve via ml/paths.py -> PROJ/data (override: $env:SYNCURA_DATA_ROOT="D:\ml-data").
 python ml/train.py `
-  --physionet "C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0\set-a" `
-  --outcomes "C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0\Outcomes-a.txt" `
+  --physionet "data\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0\set-a" `
+  --outcomes "data\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0\Outcomes-a.txt" `
   --epochs 20 --max-patients 100 --patience 5
 
-# Data directories
-$BASE = "C:\Users\fizan\Downloads\Techfusion\predicting-mortality-of-icu-patients-the-physionetcomputing-in-cardiology-challenge-2012-1.0.0\predicting-mortality-of-icu-patients-the-physionet-computing-in-cardiology-challenge-2012-1.0.0"
-#   $BASE\set-a              = 1519 patients (fast, legacy subset)
-#   $BASE\set-a_full\set-a  = 4000 patients (FULL set-a, use for training)
-#   $BASE\set-b_full\set-b  = 4000 patients (set-b, use as holdout)
-#   $BASE\Outcomes-a.txt    = labels (4000 rows), Outcomes-b.txt = set-b labels (4000 rows)
+# Data directories (see DATA.md for the full inventory; code must use ml/paths.py, never hardcode)
+#   data\predicting-...-2012-1.0.0\predicting-...-2012-1.0.0\set-a              = 1519 patients (fast, legacy subset)
+#   data\predicting-...-2012-1.0.0\predicting-...-2012-1.0.0\set-a_full\set-a  = 4000 patients (FULL set-a, use for training)
+#   data\predicting-...-2012-1.0.0\predicting-...-2012-1.0.0\set-b_full\set-b  = 4000 patients (set-b, use as holdout)
+#   Outcomes-a.txt = labels (4000 rows), Outcomes-b.txt = set-b labels (4000 rows)
 
 # Latest full-training sweep (best: 3-model mixed ensemble s48+c93+s45, val AUC 0.840, fresh holdout 0.844)
 python -m ml.sweep_xval       # full set-a vs original val split (round 15, best single 0.833)

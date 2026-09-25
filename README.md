@@ -94,10 +94,13 @@ python scripts/download_data.py --folder-id <drive-folder-id>   # or set SYNCURA
 
 | Dataset | Contents | Status |
 |---|---|---|
-| PhysioNet 2012 Challenge | 8,000 ICU stays; current training + holdout data | Local absolute path (see `ml/train.py`, `AGENTS.md`) |
+| PhysioNet 2012 Challenge | 8,000 ICU stays; current training + holdout data | `data/predicting-mortality-...-2012-1.0.0/` (see `ml/paths.py`) |
 | PhysioNet Challenge 2019 (sepsis) | 20,336 ICU stays, hourly vitals/labs, per-hour sepsis labels; 11/12 SynCura features map directly (no GCS) | On Drive → lands in `data/challenge-2019-1.0.0/` (verified by file count) |
-| MIMIC-III / MIMIC-IV demos (100 pts each) | Schema reference + ETL testbed only — too small to train on | Local `Downloads/Techfusion` zips |
+| MIMIC-III / MIMIC-IV / eICU demos (100 pts / 2.5k stays) | Schema reference + ETL testbeds only — too small to train on | `data/mimic-*-demo*/`, `data/eicu-crd-demo-2.0.1/` |
+| Simulated + Kaggle snapshots | Pipeline benchmarking and tabular baselines only — never clinical evidence | `data/hospital-deterioration-dataset/`, `data/kaggle-*/` |
 | MIMIC-IV full / eICU / HiRID | Credentialed (PhysioNet login + CITI + DUA); **never re-upload — DUAs forbid redistribution** | Each teammate credentials individually |
+
+Full inventory, coverage notes, and rules for adding datasets: **`DATA.md`**.
 
 ## Quickstart
 
